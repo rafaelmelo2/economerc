@@ -1,0 +1,56 @@
+# Sistema / editor
+.DS_Store
+*:Zone.Identifier
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Node / bun
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.vite/
+.tanstack/
+coverage/
+playwright-report/
+test-results/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+apps/mobile/ios/
+apps/mobile/android/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.keystore
+!debug.keystore
+google-services.json
+GoogleService-Info.plist
+web-build/
+
+# Python / uv
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Dados locais
+backend/uploads/
+backend/data/
+*.sqlite
+*.db
+
+# Tokens gerados ficam versionados: a vitrine e os apps leem direto
+!packages/design-tokens/dist/

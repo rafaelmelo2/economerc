@@ -1,0 +1,10 @@
+<!-- RASCUNHO do logo horizontal. "Econo" em peso regular e "Merc" em extrabold, Bricolage Grotesque. Na versão final, converter o texto em curvas. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-label="EconoMerc">
+  <g>
+    <path d="M40 10h38a8 8 0 0 1 8 8v60a8 8 0 0 1-8 8H40a8 8 0 0 1-5.66-2.34L12.34 61.66a8 8 0 0 1 0-11.32L34.34 12.34A8 8 0 0 1 40 10Z" transform="rotate(-8 48 48)" fill="#0E6B47"/>
+    <circle cx="31" cy="54" r="6.5" fill="#FFC83D"/>
+    <path d="M46 36l10 12 8-7 12 17" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M68 58h8v-8" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="104" y="62" font-family="'Bricolage Grotesque', system-ui, sans-serif" font-size="40" letter-spacing="-1" fill="#10231A"><tspan font-weight="500">Econo</tspan><tspan font-weight="800" fill="#0E6B47">Merc</tspan></text>
+</svg>

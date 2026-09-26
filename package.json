@@ -1,0 +1,8 @@
+{
+  "name": "economerc",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "tokens": "bun run --cwd packages/design-tokens build"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@economerc/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./web.css": "./dist/web.css",
+    "./native": "./dist/native.ts",
+    "./tokens.json": "./tokens.json"
+  },
+  "scripts": {
+    "build": "bun run build.ts"
+  }
+}
