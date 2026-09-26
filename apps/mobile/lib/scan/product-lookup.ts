@@ -1,13 +1,10 @@
-// Porta de lookup de produto por EAN (contrato do bloco 3B). Implementação PROVISÓRIA por
-// `fetch` cru contra `EXPO_PUBLIC_API_URL`, sem autenticação — o bloco 3A troca o corpo desta
-// função pelo cliente HTTP autenticado real (`lib/api`), mantendo a MESMA assinatura de
-// `lookupProductByEan` e o mesmo `ProductLookupResult`, que é tudo que a UI de scan consome.
-//
-// `GET /api/products/by-ean/{ean}` e `GET /api/prices` hoje exigem sessão (`CurrentUser`) —
-// sem token, toda chamada volta 401. Tratamos 401 (e qualquer erro de rede/timeout) como
-// "sem preço conhecido": nunca trava o scan, sempre cai no fluxo de cadastro rápido.
+// Lookup de produto por EAN para o scan. Usa o cliente autenticado (`lib/api`, refresh em 401)
+// e a cidade da sessão. Qualquer falha vira "sem preço conhecido" — nunca trava o scan, sempre
+// cai no fluxo de cadastro rápido.
 import type { ProductUnit } from "@/lib/cart/contract";
+import { apiClient } from "@/lib/api/client";
 import { validateGtin } from "@/lib/scan/gtin";
+import { useSessionStore } from "@/lib/store/session-store";
 
 export type KnownPriceSource = "nfce" | "community" | "flyer" | "manual" | "partner" | "scraper";
 export type UnitPriceLabel = "kg" | "l" | "un";
@@ -39,48 +36,23 @@ export type ProductLookupResult =
   /** 401 sem sessão, rede fora, timeout ou 5xx — nunca é erro fatal pra UI. */
   | { status: "unavailable" };
 
-const DEFAULT_API_BASE_URL = "http://localhost:8010";
-const REQUEST_TIMEOUT_MS = 4000;
-
-function resolveApiBaseUrl(): string {
-  return process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_API_BASE_URL;
-}
-
 /**
- * Cidade ativa do usuário, em `city_id` (UUID) do backend. Não existe hoje, nesta base de
- * código, nenhuma ponte entre `citySlug` (onboarding, `lib/mock/cities.ts`) e o `city_id` real —
- * isso nasce junto do cliente autenticado do bloco 3A. Até lá, sem `cityId` só o produto é
- * buscado (nunca o preço), e a folha de confirmação trata como "achamos o produto, mas não
- * o preço" — exatamente o fallback que `docs/brand/voz.md` já prevê.
+ * Cidade ativa do usuário (UUID de `GET /api/cities`), escolhida no onboarding e guardada na
+ * sessão. Sem cidade, só o produto é buscado — a folha cai em "achamos o produto, mas não o
+ * preço" (`docs/brand/voz.md`).
  */
 function resolveActiveCityId(): string | null {
-  return null;
+  return useSessionStore.getState().onboarding.cityId;
 }
 
-async function fetchJson(path: string): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    return await fetch(`${resolveApiBaseUrl()}${path}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
+// Corpos já em camelCase: o `ApiClient` (packages/shared) converte snake_case na borda.
 interface ProductResponseBody {
   id: string;
   ean: string | null;
   name: string;
   brand: string | null;
-  category_id: string | null;
+  categoryId: string | null;
   unit: ProductUnit;
-  net_quantity: string | null;
-  image_upload_id: string | null;
-  source: string;
 }
 
 function mapProductResponse(body: ProductResponseBody, fallbackEan: string): LookedUpProduct {
@@ -90,7 +62,7 @@ function mapProductResponse(body: ProductResponseBody, fallbackEan: string): Loo
     name: body.name,
     brand: body.brand,
     unit: body.unit,
-    categoryId: body.category_id,
+    categoryId: body.categoryId,
   };
 }
 
@@ -101,28 +73,25 @@ type FetchProductResult =
 
 async function fetchProductByEan(ean: string): Promise<FetchProductResult> {
   try {
-    const response = await fetchJson(`/api/products/by-ean/${ean}`);
-    if (response.status === 401) return { status: "unavailable" };
+    const response = await apiClient.get<ProductResponseBody>(`/products/by-ean/${ean}`);
     if (response.status === 404) return { status: "not-found" };
-    if (!response.ok) return { status: "unavailable" };
-
-    const body = (await response.json()) as ProductResponseBody;
-    return { status: "found", product: mapProductResponse(body, ean) };
+    if (!response.success) return { status: "unavailable" };
+    return { status: "found", product: mapProductResponse(response.data, ean) };
   } catch {
-    return { status: "unavailable" };
+    return { status: "unavailable" }; // rede fora: nunca trava o scan
   }
 }
 
 interface PriceObservationResponseBody {
   id: string;
-  market_id: string;
-  market_name: string;
+  marketId: string;
+  marketName: string;
   amount: string;
-  unit_amount: string | null;
-  unit_label: UnitPriceLabel | null;
+  unitAmount: string | null;
+  unitLabel: UnitPriceLabel | null;
   source: KnownPriceSource;
-  observed_at: string;
-  is_stale: boolean;
+  observedAt: string;
+  isStale: boolean;
 }
 
 /** "18.90" (Decimal serializado como string, nunca float — ver `.claude/rules/backend.md`) → 1890. */
@@ -136,14 +105,14 @@ function parseDecimalStringToCents(value: string): number {
 
 function mapPriceObservation(body: PriceObservationResponseBody): KnownMarketPrice {
   return {
-    marketId: body.market_id,
-    marketName: body.market_name,
+    marketId: body.marketId,
+    marketName: body.marketName,
     amountCents: parseDecimalStringToCents(body.amount),
-    unitAmountCents: body.unit_amount === null ? null : parseDecimalStringToCents(body.unit_amount),
-    unitLabel: body.unit_label,
+    unitAmountCents: body.unitAmount === null ? null : parseDecimalStringToCents(body.unitAmount),
+    unitLabel: body.unitLabel,
     source: body.source,
-    isStale: body.is_stale,
-    observedAt: body.observed_at,
+    isStale: body.isStale,
+    observedAt: body.observedAt,
   };
 }
 
@@ -153,17 +122,18 @@ function pickMostRecentObservation(
 ): PriceObservationResponseBody | null {
   if (observations.length === 0) return null;
   return observations.reduce((latest, current) =>
-    new Date(current.observed_at).getTime() > new Date(latest.observed_at).getTime() ? current : latest,
+    new Date(current.observedAt).getTime() > new Date(latest.observedAt).getTime() ? current : latest,
   );
 }
 
 async function fetchLatestKnownPrice(ean: string, cityId: string): Promise<KnownMarketPrice | null> {
   try {
-    const response = await fetchJson(`/api/prices?ean=${ean}&city_id=${cityId}`);
-    if (!response.ok) return null; // 401/404/5xx → sem preço conhecido, nunca erro fatal
-
-    const body = (await response.json()) as PriceObservationResponseBody[];
-    const latest = pickMostRecentObservation(body);
+    const response = await apiClient.get<PriceObservationResponseBody[]>("/prices", {
+      ean,
+      city_id: cityId,
+    });
+    if (!response.success) return null; // 404/5xx → sem preço conhecido, nunca erro fatal
+    const latest = pickMostRecentObservation(response.data);
     return latest ? mapPriceObservation(latest) : null;
   } catch {
     return null;
