@@ -171,6 +171,11 @@ class Settings(BaseModel):
     # Opcional: a app sobe sem chave (dev sem IA configurada); a chamada real
     # falha explicitamente no client (ver `services/ai/ai_client.py`).
     openrouter_api_key: SecretStr | None = Field(default_factory=lambda: _opt("OPENROUTER_API_KEY"))
+    # Só o login web (popup auth-code) troca `code` por token com o secret; o
+    # login nativo do app manda o id_token direto e não usa isto.
+    google_web_client_secret: SecretStr | None = Field(
+        default_factory=lambda: _opt("GOOGLE_WEB_CLIENT_SECRET")
+    )
 
     @field_validator("jwt_secret_key")
     @classmethod

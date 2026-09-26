@@ -43,7 +43,7 @@ auth:
   google:
     client_id_ios: "REPLACE_WITH_GOOGLE_IOS_CLIENT_ID.apps.googleusercontent.com"
     client_id_android: "REPLACE_WITH_GOOGLE_ANDROID_CLIENT_ID.apps.googleusercontent.com"
-    client_id_web: "REPLACE_WITH_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com"
+    client_id_web: "53392248463-kq5neajekemcn9i8ubrn8djd7h7gbk5q.apps.googleusercontent.com"
     jwks_url: https://www.googleapis.com/oauth2/v3/certs
     jwks_cache_ttl_seconds: 3600
   apple:
