@@ -54,6 +54,7 @@ auth:
   # E-mails que entram como admin no primeiro login Google/Apple (bloco 5B).
   admin_emails:
     - "rafinhalelograma@hotmail.com"
+    - "rafinha.rm675@gmail.com"
 
 logging:
   service_name: economerc-backend
