@@ -1,0 +1,56 @@
+# Override de ambiente LOCAL — portas fixas do EconoMerc (docs/fases-construcao.md),
+# hot reload do backend e volumes de dev. Nunca usado sem o `compose.yaml` base
+# (mesclado via `COMPOSE_FILE` no `.env`).
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: economerc_local
+    ports:
+      - "5442:5432"
+
+  valkey:
+    ports:
+      - "6389:6379" # debug via redis-cli -p 6389 (o app usa o socket UDS)
+    command: >
+      valkey-server
+      --unixsocket /run/valkey/valkey.sock
+      --unixsocketperm 770
+      --port 6379
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --requirepass ${VALKEY_PASSWORD}
+
+  nats:
+    ports:
+      - "4232:4222"
+      - "8232:8222"
+
+  migrate:
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc_local?sslmode=disable
+
+  backend:
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc_local?sslmode=disable
+      ENVIRONMENT: local
+      SERVICE_NAME: economerc-backend
+      APP_ENV: local
+      LOG_LEVEL: DEBUG
+      LOG_FORMAT: console
+    ports:
+      - "8010:8000"
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/config:/app/config:ro
+      - ./backend/tests:/app/tests:ro
+    # Hot reload: uvicorn (já no venv da imagem) observa `src/` bind-montado acima.
+    # Granian (prod) fica no Dockerfile CMD — `uv` não existe no estágio runtime.
+    command:
+      [
+        "sh",
+        "-c",
+        "uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload --app-dir src",
+      ]
