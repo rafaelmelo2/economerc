@@ -12,8 +12,11 @@ from api.routes.geo.city import router as city_router
 from api.routes.health import router as health_router
 from api.routes.markets.market import router as market_router
 from api.routes.ocr.price_tag import router as ocr_price_tag_router
+from api.routes.prices.admin_price import router as admin_price_router
 from api.routes.prices.price import router as price_router
+from api.routes.receipts.admin_receipt import router as admin_receipt_router
 from api.routes.receipts.receipt import router as receipt_router
+from api.routes.reports.report import router as report_router
 from api.routes.sync.pull import router as sync_pull_router
 from api.routes.sync.push import router as sync_push_router
 from config.api import api_config
@@ -35,3 +38,6 @@ api_router.include_router(receipt_router)
 api_router.include_router(supercatalao_admin_router)
 api_router.include_router(offer_candidates_admin_router)
 api_router.include_router(whatsapp_webhook_router)
+api_router.include_router(admin_price_router)
+api_router.include_router(admin_receipt_router)
+api_router.include_router(report_router)

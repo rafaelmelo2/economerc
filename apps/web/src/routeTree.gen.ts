@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as EntrarRouteImport } from './routes/entrar'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated/historico'
 import { Route as AuthenticatedOfertasRouteImport } from './routes/_authenticated/ofertas'
 import { Route as AuthenticatedAdminFilaOfertasRouteImport } from './routes/_authenticated/admin/fila-ofertas'
@@ -34,6 +35,11 @@ const EntrarRoute = EntrarRouteImport.update({
   path: '/entrar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
   id: '/historico',
   path: '/historico',
@@ -46,37 +52,38 @@ const AuthenticatedOfertasRoute = AuthenticatedOfertasRouteImport.update({
 } as any)
 const AuthenticatedAdminFilaOfertasRoute =
   AuthenticatedAdminFilaOfertasRouteImport.update({
-    id: '/admin/fila-ofertas',
-    path: '/admin/fila-ofertas',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/fila-ofertas',
+    path: '/fila-ofertas',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminMercadosRoute =
   AuthenticatedAdminMercadosRouteImport.update({
-    id: '/admin/mercados',
-    path: '/admin/mercados',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/mercados',
+    path: '/mercados',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminNotasRoute = AuthenticatedAdminNotasRouteImport.update({
-  id: '/admin/notas',
-  path: '/admin/notas',
-  getParentRoute: () => AuthenticatedRoute,
+  id: '/notas',
+  path: '/notas',
+  getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
 const AuthenticatedAdminPrecosRoute =
   AuthenticatedAdminPrecosRouteImport.update({
-    id: '/admin/precos',
-    path: '/admin/precos',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/precos',
+    path: '/precos',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminProdutosRoute =
   AuthenticatedAdminProdutosRouteImport.update({
-    id: '/admin/produtos',
-    path: '/admin/produtos',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/produtos',
+    path: '/produtos',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/entrar': typeof EntrarRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/historico': typeof AuthenticatedHistoricoRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
   '/admin/fila-ofertas': typeof AuthenticatedAdminFilaOfertasRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/entrar': typeof EntrarRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/historico': typeof AuthenticatedHistoricoRoute
   '/ofertas': typeof AuthenticatedOfertasRoute
   '/admin/fila-ofertas': typeof AuthenticatedAdminFilaOfertasRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/entrar': typeof EntrarRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
   '/_authenticated/ofertas': typeof AuthenticatedOfertasRoute
   '/_authenticated/admin/fila-ofertas': typeof AuthenticatedAdminFilaOfertasRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/entrar'
+    | '/admin'
     | '/historico'
     | '/ofertas'
     | '/admin/fila-ofertas'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/entrar'
+    | '/admin'
     | '/historico'
     | '/ofertas'
     | '/admin/fila-ofertas'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/entrar'
+    | '/_authenticated/admin'
     | '/_authenticated/historico'
     | '/_authenticated/ofertas'
     | '/_authenticated/admin/fila-ofertas'
@@ -175,6 +187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EntrarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/historico': {
       id: '/_authenticated/historico'
       path: '/historico'
@@ -191,45 +210,43 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/admin/fila-ofertas': {
       id: '/_authenticated/admin/fila-ofertas'
-      path: '/admin/fila-ofertas'
+      path: '/fila-ofertas'
       fullPath: '/admin/fila-ofertas'
       preLoaderRoute: typeof AuthenticatedAdminFilaOfertasRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/mercados': {
       id: '/_authenticated/admin/mercados'
-      path: '/admin/mercados'
+      path: '/mercados'
       fullPath: '/admin/mercados'
       preLoaderRoute: typeof AuthenticatedAdminMercadosRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/notas': {
       id: '/_authenticated/admin/notas'
-      path: '/admin/notas'
+      path: '/notas'
       fullPath: '/admin/notas'
       preLoaderRoute: typeof AuthenticatedAdminNotasRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/precos': {
       id: '/_authenticated/admin/precos'
-      path: '/admin/precos'
+      path: '/precos'
       fullPath: '/admin/precos'
       preLoaderRoute: typeof AuthenticatedAdminPrecosRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/produtos': {
       id: '/_authenticated/admin/produtos'
-      path: '/admin/produtos'
+      path: '/produtos'
       fullPath: '/admin/produtos'
       preLoaderRoute: typeof AuthenticatedAdminProdutosRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAdminRoute
     }
   }
 }
 
-interface AuthenticatedRouteChildren {
-  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
-  AuthenticatedOfertasRoute: typeof AuthenticatedOfertasRoute
+interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminFilaOfertasRoute: typeof AuthenticatedAdminFilaOfertasRoute
   AuthenticatedAdminMercadosRoute: typeof AuthenticatedAdminMercadosRoute
   AuthenticatedAdminNotasRoute: typeof AuthenticatedAdminNotasRoute
@@ -237,14 +254,27 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminProdutosRoute: typeof AuthenticatedAdminProdutosRoute
 }
 
-const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
-  AuthenticatedOfertasRoute: AuthenticatedOfertasRoute,
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminFilaOfertasRoute: AuthenticatedAdminFilaOfertasRoute,
   AuthenticatedAdminMercadosRoute: AuthenticatedAdminMercadosRoute,
   AuthenticatedAdminNotasRoute: AuthenticatedAdminNotasRoute,
   AuthenticatedAdminPrecosRoute: AuthenticatedAdminPrecosRoute,
   AuthenticatedAdminProdutosRoute: AuthenticatedAdminProdutosRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
+  AuthenticatedOfertasRoute: typeof AuthenticatedOfertasRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
+  AuthenticatedOfertasRoute: AuthenticatedOfertasRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

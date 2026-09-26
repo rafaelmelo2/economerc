@@ -52,6 +52,8 @@ auth:
     service_id: "com.economerc.app.test.web"
     jwks_url: https://appleid.apple.com/auth/keys
     jwks_cache_ttl_seconds: 3600
+  admin_emails:
+    - "admin@example.com"
 
 logging:
   service_name: economerc-backend-test

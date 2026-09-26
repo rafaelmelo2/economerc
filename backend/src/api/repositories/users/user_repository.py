@@ -38,6 +38,18 @@ class UserRepository:
             user_id,
         )
 
+    async def set_role(self, conn: Connection, user_id: UUID, role: str) -> dict | None:
+        """Promoção por e-mail admin (bloco 5B) — nunca rebaixa fora daqui, e nunca
+
+        mexe quando o papel já é o mesmo (evita `updated_at` sem mudança real).
+        """
+        row = await conn.fetchrow(
+            "UPDATE users SET role = $2, updated_at = now() WHERE id = $1 RETURNING *",
+            user_id,
+            role,
+        )
+        return dict(row) if row else None
+
     async def soft_delete_and_anonymize(self, conn: Connection, user_id: UUID) -> bool:
         """LGPD/App Store: apaga PII e marca `deleted_at`. `email`/`display_name`
 

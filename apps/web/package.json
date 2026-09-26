@@ -6,31 +6,44 @@
     "dev": "vite",
     "build": "tsgo --noEmit && vite build",
     "preview": "vite preview --port 5180",
-    "routes:gen": "tsr generate"
+    "routes:gen": "tsr generate",
+    "test": "vitest run"
   },
   "dependencies": {
     "@economerc/design-tokens": "workspace:*",
+    "@economerc/shared": "workspace:*",
     "@fontsource/bricolage-grotesque": "^5.2.9",
     "@fontsource/inter": "^5.2.8",
+    "@react-oauth/google": "^0.13.5",
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-query": "^5.100.11",
     "@tanstack/react-router": "^1.170.39",
     "class-variance-authority": "^0.7.1",
+    "cmdk": "^1.1.1",
     "cn": "^0.4.0",
     "lucide-react": "^1.48.0",
+    "next-themes": "^0.4.6",
     "radix-ui": "^1.6.7",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-icons": "^5.6.0",
+    "recharts": "3.8.0",
+    "sonner": "^2.0.8",
+    "zod": "^4.6.5",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@tanstack/router-plugin": "^1.168.40",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "@vitejs/plugin-react": "^6.0.2",
+    "jsdom": "29.1.1",
     "tailwindcss": "^4.3.3",
-    "vite": "^8.3.1"
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
   }
 }

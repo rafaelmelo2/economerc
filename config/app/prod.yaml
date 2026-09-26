@@ -47,6 +47,8 @@ auth:
     service_id: "com.economerc.app.web"
     jwks_url: https://appleid.apple.com/auth/keys
     jwks_cache_ttl_seconds: 3600
+  # Vazio até o dono decidir quem entra como admin em prod.
+  admin_emails: []
 
 logging:
   service_name: economerc-backend

@@ -119,6 +119,10 @@ class AuthSettings(BaseModel):
     refresh_token: RefreshTokenSettings
     google: GoogleAuthSettings
     apple: AppleAuthSettings
+    # E-mails verificados (Google/Apple) que viram `role='admin'` no login (bloco 5B). Comparação
+    # case-insensitive (ver `account_linking_service._is_admin_email`). Vazio em staging/prod até
+    # o dono da conta decidir quem entra — nunca hardcode de e-mail no código.
+    admin_emails: list[str] = Field(default_factory=list)
 
 
 class LoggingSettings(BaseModel):

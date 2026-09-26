@@ -30,6 +30,14 @@ export type JsonValue =
   | readonly JsonValue[]
   | { [key: string]: JsonValue };
 
+/** Cast explícito e único pro boundary JSON — `payload?: undefined` em interface de request
+ * (campo opcional) não é estruturalmente um `JsonValue` (que não inclui `undefined`), então
+ * todo `ApiClient.post/patch` de um DTO próprio passa por aqui em vez de espalhar `as never`
+ * pelos call sites. */
+export function toJsonBody<T>(value: T): JsonValue {
+  return value as unknown as JsonValue;
+}
+
 function snakeToCamel(key: string): string {
   return key.replace(/_([a-z0-9])/g, (_match, char: string) => char.toUpperCase());
 }
