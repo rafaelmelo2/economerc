@@ -1,5 +1,11 @@
 # Fases de construção
 
+> **Estado (26/09/2026):** ondas 1–6 concluídas e mescladas no `main`. Backend 269 testes, app 68,
+> web 8. Verificado ponta a ponta na API real: sync idempotente, scan → produto (Open Food Facts)
+> → preço, carrinho fechado → preço `community` visível para a cidade, NFC-e inexistente falha na
+> hora com mensagem amigável, OCR real de etiqueta via OpenRouter, coletor real do Supermercado
+> Catalão (375 produtos). Pendências no fim deste arquivo.
+
 Como o [roadmap da Fase 1](roadmap-fase1.md) vira código. As etapas do roadmap são agrupadas em **ondas**. Dentro de uma onda, os blocos rodam **em paralelo** (subagentes em worktrees separados, cada um dono de uma pasta). Uma onda só começa quando a anterior foi mesclada e verificada.
 
 ## Portas locais (fixas; não colidem com nexarena/dudamuck/ponto)
@@ -65,3 +71,19 @@ Como o [roadmap da Fase 1](roadmap-fase1.md) vira código. As etapas do roadmap 
 - Trabalhar **só na própria pasta**. Commit local em português, **sem trailers** (sem `Co-Authored-By`/`Claude-Session`). **Nunca `git push`.**
 - `bun` e `uv` apenas. Dinheiro nunca em float.
 - Terminar com a verificação da tabela **rodada de verdade**, e relatar o que passou, o que falhou e o que ficou pendente.
+
+## Onda 6: preço compartilhado (fechamento)
+
+Seletor "Em qual mercado você está?" no app, preço sugerido do mercado atual no scan, carrinho
+fechado gera `prices` com `source='community'` (idempotente), NFC-e inexistente falha na hora e a
+API devolve `failure_message` amigável.
+
+## Pendências para o lançamento fechado (Etapa 11)
+
+- Build EAS de desenvolvimento (Android) → SHA-1 → cliente OAuth Android no Google Cloud; iOS e Apple depois.
+- Rede WSL2 → celular (modo espelhado ou túnel) para testar o app contra a API local; depois deploy na VPS.
+- 10–20 NFC-e reais de Catalão: validar o parser de GO (EAN/NCM no resumo?) e virar fixtures reais.
+- Coletor do Pontal (API atrás do Cloudflare — capturar sessão num Chrome real) e chip + Evolution para o WhatsApp.
+- Casamento dos 375 aliases do Supermercado Catalão com produtos (revisão no admin).
+- Screenshots do app na web não saem neste ambiente (expo-sqlite trava no Chromium sandboxado) — validar visual no aparelho.
+- Política de privacidade e termos (LGPD), monitor do `/api/health`, backups.
