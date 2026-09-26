@@ -181,6 +181,83 @@ services:
         max-file: "10"
         compress: "true"
 
+  # Bloco 4C (coletores de preço, docs/fontes-de-dados.md). Mesma imagem do `backend`,
+  # `command` trocado — nunca sobe sozinho com `docker compose up` sem citar o serviço
+  # (ninguém edita este arquivo pra rodar; ver `.claude/rules` do bloco).
+  whatsapp-offer-worker:
+    container_name: economerc-whatsapp-offer-worker
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_UID: ${APP_UID:-1000}
+    <<: *no-new-privs
+    command: ["python", "-m", "api.workers.whatsapp_offer_worker"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc?sslmode=disable
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+    volumes:
+      - ./config/app/${ENVIRONMENT}.yaml:/app/app.yaml:ro
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: always
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "5"
+        compress: "true"
+
+  # Comando único por execução (`python -m api.workers.collect_supercatalao`), não um daemon —
+  # agendado por cron/systemd timer do host chamando `docker compose run --rm
+  # supercatalao-collector`. `profiles: [cron]` garante que `docker compose up` (sem citar o
+  # serviço) nunca sobe isso sozinho.
+  supercatalao-collector:
+    container_name: economerc-supercatalao-collector
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_UID: ${APP_UID:-1000}
+    <<: *no-new-privs
+    profiles: ["cron"]
+    command: ["python", "-m", "api.workers.collect_supercatalao"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc?sslmode=disable
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+    volumes:
+      - ./config/app/${ENVIRONMENT}.yaml:/app/app.yaml:ro
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
 volumes:
   pgdata:
   valkey-data:

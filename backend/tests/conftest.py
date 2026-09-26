@@ -29,6 +29,7 @@ _REPO_ROOT = _BACKEND_DIR.parent
 os.environ["JWT_SECRET_KEY"] = "test_secret_key_for_unit_tests_only_padded_to_32_bytes_min"
 os.environ["VALKEY_PASSWORD"] = ""
 os.environ["OPENROUTER_API_KEY"] = "sk-test-fake-key-never-sent"
+os.environ["WHATSAPP_WEBHOOK_SECRET"] = "test-whatsapp-webhook-secret-never-sent"
 
 # O Postgres de teste é o MESMO container do `docker compose up` local (porta
 # publicada, banco `economerc_test` à parte) — a senha real é a do `.env` raiz,

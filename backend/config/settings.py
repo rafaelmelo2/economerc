@@ -171,6 +171,12 @@ class Settings(BaseModel):
     # Opcional: a app sobe sem chave (dev sem IA configurada); a chamada real
     # falha explicitamente no client (ver `services/ai/ai_client.py`).
     openrouter_api_key: SecretStr | None = Field(default_factory=lambda: _opt("OPENROUTER_API_KEY"))
+    # Segredo compartilhado do webhook da Evolution API (bloco 4C, `routes/collectors/
+    # whatsapp_webhook.py`). Opcional como os demais secrets — sem ele, o webhook nega tudo
+    # (fail-closed), nunca aceita sem verificação.
+    whatsapp_webhook_secret: SecretStr | None = Field(
+        default_factory=lambda: _opt("WHATSAPP_WEBHOOK_SECRET")
+    )
 
     @field_validator("jwt_secret_key")
     @classmethod
