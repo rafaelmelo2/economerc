@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/* Fonte única da marca — ver docs/brand/visual.md. Pesos usados: Bricolage 500/700/800
+   (títulos, wordmark), Inter 400-600 (interface). */
+@import "@fontsource/bricolage-grotesque/500.css";
+@import "@fontsource/bricolage-grotesque/700.css";
+@import "@fontsource/bricolage-grotesque/800.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+
+/* Tokens gerados por packages/design-tokens/build.ts — cores claro/escuro + @theme inline
+   (--color-primary, --font-display, --radius-*, --text-*...). Fonte única: NUNCA hex solto aqui. */
+@import "@economerc/design-tokens/web.css";
+
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+/* shadcn/ui espera este conjunto de vars semantic; mapeamos para os tokens do EconoMerc
+   em vez de criar uma paleta nova (ver web.md > Regra de trabalho > Marca). */
+@theme inline {
+  --color-card: var(--surface);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--foreground);
+  --color-secondary: var(--surface-muted);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--surface-muted);
+  --color-muted-foreground: var(--foreground-muted);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--danger-foreground);
+  --color-input: var(--border);
+
+  --color-sidebar: var(--surface);
+  --color-sidebar-foreground: var(--foreground);
+  --color-sidebar-primary: var(--primary);
+  --color-sidebar-primary-foreground: var(--primary-foreground);
+  --color-sidebar-accent: var(--primary-soft);
+  --color-sidebar-accent-foreground: var(--primary);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--primary);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
