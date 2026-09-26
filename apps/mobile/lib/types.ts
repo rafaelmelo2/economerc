@@ -28,11 +28,3 @@ export interface CategorySpend {
   label: string;
   totalCents: number;
 }
-
-export interface HistoryPurchase {
-  id: string;
-  date: Date;
-  marketName: string;
-  itemCount: number;
-  totalCents: number;
-}

@@ -1,4 +1,5 @@
 import { FlashList } from "@shopify/flash-list";
+import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, View } from "react-native";
@@ -9,10 +10,13 @@ import { BudgetBar } from "@/components/cart/budget-bar";
 import { CartItemRow } from "@/components/cart/cart-item-row";
 import { EmptyCart } from "@/components/cart/empty-cart";
 import { ScanToast } from "@/components/scan/toast";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Text } from "@/components/ui/text";
 import {
   addCartItem,
+  closeActiveCart,
   setCartBudget,
   removeCartItem,
   useActiveCart,
@@ -33,6 +37,10 @@ export default function CartScreen() {
 
   const [editingItem, setEditingItem] = useState<CartItemRecord | null>(null);
   const [undoToast, setUndoToast] = useState<{ item: CartItemRecord } | null>(null);
+  const [finishDialogOpen, setFinishDialogOpen] = useState(false);
+  const [readReceiptPromptOpen, setReadReceiptPromptOpen] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const lastClosedCartClientIdRef = useRef<string | null>(null);
 
   const previousPercentageRef = useRef(0);
   const previousItemCountRef = useRef(cart.items.length);
@@ -86,6 +94,26 @@ export default function CartScreen() {
     });
   }
 
+  /** `closeActiveCart` já move a compra pro histórico local (status='closed') e agenda o sync —
+   * a única coisa que falta aqui é oferecer o próximo passo (ler a nota). */
+  async function handleConfirmFinish() {
+    setFinishing(true);
+    lastClosedCartClientIdRef.current = cart.clientId;
+    await closeActiveCart();
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setFinishing(false);
+    setFinishDialogOpen(false);
+    setReadReceiptPromptOpen(true);
+  }
+
+  function handleReadReceiptNow() {
+    setReadReceiptPromptOpen(false);
+    router.push({
+      pathname: "/(tabs)/scan",
+      params: { intent: "receipt", cartClientId: lastClosedCartClientIdRef.current ?? "" },
+    });
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="flex-1 gap-4 px-4 pt-2">
@@ -118,6 +146,14 @@ export default function CartScreen() {
         )}
       </View>
 
+      {cart.items.length > 0 ? (
+        <View className="border-t border-border bg-background px-4 pb-3 pt-3">
+          <Button size="lg" onPress={() => setFinishDialogOpen(true)}>
+            Finalizar compra
+          </Button>
+        </View>
+      ) : null}
+
       <CartItemEditSheet item={editingItem} onClose={() => setEditingItem(null)} onRemove={handleRemove} />
 
       {undoToast ? (
@@ -128,6 +164,26 @@ export default function CartScreen() {
           onDismiss={() => setUndoToast(null)}
         />
       ) : null}
+
+      <ConfirmDialog
+        visible={finishDialogOpen}
+        title="Finalizar compra?"
+        description={`O carrinho fecha com ${formatCentsToBRL(cart.totalCents)} e vai pro seu histórico. Você ainda pode ler a nota da compra em seguida.`}
+        confirmLabel="Finalizar"
+        onConfirm={() => void handleConfirmFinish()}
+        onCancel={() => setFinishDialogOpen(false)}
+      />
+      {finishing ? null : (
+        <ConfirmDialog
+          visible={readReceiptPromptOpen}
+          title="Compra finalizada"
+          description="Quer ler a nota fiscal agora? A gente lê o QR Code e confere os itens e o total pago."
+          confirmLabel="Ler a nota agora"
+          cancelLabel="Agora não"
+          onConfirm={handleReadReceiptNow}
+          onCancel={() => setReadReceiptPromptOpen(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }

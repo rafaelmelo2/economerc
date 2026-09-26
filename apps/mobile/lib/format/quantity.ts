@@ -46,3 +46,12 @@ export function formatMilliToQuantityInput(milli: number, unit: ProductUnit): st
 export function formatQuantityLabel(milli: number, unit: ProductUnit): string {
   return `${formatMilliToQuantityInput(milli, unit)} ${unitDisplayLabel(unit)}`;
 }
+
+/** Quantidade decimal CRUA da nota fiscal ("2.000", "0.500" — texto livre do DANFE, não
+ * milésimos do carrinho) → rótulo pt-BR ("2 un", "0,5 kg"). Só exibição — nunca vira número
+ * pra cálculo (o total já vem pronto do backend). */
+export function formatReceiptQuantityLabel(quantity: string, unit: string | null): string {
+  const trimmed = quantity.includes(".") ? quantity.replace(/0+$/, "").replace(/\.$/, "") : quantity;
+  const label = trimmed.replace(".", ",");
+  return unit ? `${label} ${unit.toLowerCase()}` : label;
+}

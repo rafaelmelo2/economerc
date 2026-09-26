@@ -4,5 +4,6 @@ export * from "./field-versions";
 export * from "./local-kv-repository";
 export * from "./outbox-repository";
 export * from "./products-cache-repository";
+export * from "./receipts-repository";
 export * from "./sync-state-repository";
 export * from "./types";

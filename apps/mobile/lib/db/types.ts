@@ -65,3 +65,41 @@ export interface ProductCacheRow {
   net_quantity: string | null;
   fetched_at: string;
 }
+
+// Espelha `ReceiptStatus` do backend (`schemas/receipts/receipt.py`) + o estado local
+// `queued` (ainda não chegou a mandar `POST /receipts` — ver `lib/receipts/queue.ts`).
+export type ReceiptQueueStatus = "queued" | "pending" | "processing" | "done" | "failed" | "duplicate";
+
+/** Item cacheado de `ReceiptItemResponse` (camelCase, dinheiro em centavos) — serializado em
+ * `receipts.items_json`. `quantity` fica como string decimal (exibição só; nunca vira float). */
+export interface ReceiptItemCache {
+  id: string;
+  lineNumber: number;
+  ean: string | null;
+  rawName: string;
+  quantity: string;
+  unit: string | null;
+  unitPriceCents: number;
+  totalPriceCents: number;
+}
+
+export interface ReceiptRow {
+  client_id: string;
+  server_id: string | null;
+  qr_text: string;
+  access_key: string;
+  cart_client_id: string | null;
+  status: ReceiptQueueStatus;
+  failure_reason: string | null;
+  market_id: string | null;
+  market_name: string | null;
+  issued_at: string | null;
+  total_amount_cents: number | null;
+  discount_amount_cents: number | null;
+  items_json: string; // ReceiptItemCache[]
+  created_at: string;
+  updated_at: string;
+  last_synced_at: string | null;
+  attempts: number;
+  next_attempt_at: string | null;
+}

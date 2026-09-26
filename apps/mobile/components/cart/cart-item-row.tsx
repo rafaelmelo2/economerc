@@ -31,12 +31,10 @@ export function CartItemRow({ item, onPress, onRemove }: CartItemRowProps) {
         <CategoryIcon category={item.category} size={20} color={iconColor} />
       </View>
       <View className="flex-1 gap-0.5">
-        <View className="flex-row items-center gap-2">
-          {item.isOffer ? <OfferBadge /> : null}
-          <Text variant="callout" className="flex-1 font-sans-semibold" numberOfLines={1}>
-            {item.productName}
-          </Text>
-        </View>
+        {item.isOffer ? <OfferBadge /> : null}
+        <Text variant="callout" className="font-sans-semibold" numberOfLines={2}>
+          {item.productName}
+        </Text>
         <Text variant="caption" color="muted">
           {formatQuantityLabel(item.quantityMilli, item.unit)} · {unitPriceLabel}
         </Text>

@@ -14,8 +14,11 @@ export interface ScanFrameProps {
   onToggleTorch: () => void;
   onManualEntry: () => void;
   onNoBarcode: () => void;
-  /** Banner curto sobre a moldura (ex.: "Leitura de nota chega em breve", "Código inválido"). */
+  /** Banner curto sobre a moldura (ex.: "Código inválido", erro de leitura de nota). */
   banner?: string;
+  /** Texto permanente exibido quando não há banner — muda quando o scan chega em "modo nota"
+   * (`?intent=receipt`, vindo de "Finalizar compra" → "Ler a nota agora"). */
+  hint?: string;
 }
 
 /**
@@ -23,7 +26,14 @@ export interface ScanFrameProps {
  * `CameraView` real e é reaproveitada tal-e-qual pelo modo demo (`?demo=1`), que renderiza esta
  * mesma UI sobre um fundo estático — a câmera não roda em screenshot.
  */
-export function ScanFrame({ torchOn, onToggleTorch, onManualEntry, onNoBarcode, banner }: ScanFrameProps) {
+export function ScanFrame({
+  torchOn,
+  onToggleTorch,
+  onManualEntry,
+  onNoBarcode,
+  banner,
+  hint = "Aponte para o código de barras",
+}: ScanFrameProps) {
   const TorchIcon = torchOn ? Flashlight : FlashlightOff;
   const accentForegroundColor = useThemeColor("accent-foreground");
 
@@ -54,7 +64,7 @@ export function ScanFrame({ torchOn, onToggleTorch, onManualEntry, onNoBarcode, 
           </View>
         ) : (
           <Text variant="callout" className="text-center text-grafite-0">
-            Aponte para o código de barras
+            {hint}
           </Text>
         )}
       </View>

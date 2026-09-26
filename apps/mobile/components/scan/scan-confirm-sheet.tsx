@@ -139,8 +139,15 @@ export function ScanConfirmSheet({ target, onClose, onAdded }: ScanConfirmSheetP
   const { title, subtitle } = target ? headerCopy(target) : { title: "", subtitle: null };
   const knownPrice = target?.kind === "scan" && target.lookup?.status === "found" ? target.lookup.price : null;
 
+  const footer =
+    draft && !loading ? (
+      <Button size="lg" disabled={!canSubmit} loading={submitting} onPress={handleAdd}>
+        Adicionar ao carrinho
+      </Button>
+    ) : undefined;
+
   return (
-    <Sheet visible={visible} onRequestClose={onClose}>
+    <Sheet visible={visible} onRequestClose={onClose} footer={footer}>
       {!draft || loading ? (
         <View className="items-center gap-3 py-10">
           <ActivityIndicator />
@@ -224,10 +231,6 @@ export function ScanConfirmSheet({ target, onClose, onAdded }: ScanConfirmSheetP
                   {formatCentsAsBRLInput(totalCents)}
                 </Text>
               </View>
-
-              <Button size="lg" disabled={!canSubmit} loading={submitting} onPress={handleAdd}>
-                Adicionar ao carrinho
-              </Button>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
