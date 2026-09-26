@@ -1,49 +1,133 @@
 import { FlashList } from "@shopify/flash-list";
-import { View } from "react-native";
+import * as Haptics from "expo-haptics";
+import { useEffect, useRef, useState } from "react";
+import { AccessibilityInfo, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { CartItemEditSheet } from "@/components/cart/cart-item-edit-sheet";
 import { BudgetBar } from "@/components/cart/budget-bar";
 import { CartItemRow } from "@/components/cart/cart-item-row";
 import { EmptyCart } from "@/components/cart/empty-cart";
+import { ScanToast } from "@/components/scan/toast";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
+import {
+  addCartItem,
+  setCartBudget,
+  removeCartItem,
+  useActiveCart,
+  type CartItemRecord,
+} from "@/lib/cart/contract";
 import { computeBudgetStatus } from "@/lib/budget";
-import { sumCents } from "@/lib/format/money";
-import { MOCK_CART_ITEMS, MOCK_MARKET_NAME } from "@/lib/mock/cart";
+import { formatCentsToBRL } from "@/lib/format/money";
 import { useSessionStore } from "@/lib/store/session-store";
-import type { CartItem } from "@/lib/types";
+
+/** Quando não há orçamento definido pra esta compra, chuta 1/4 do mensal (visão semanal). */
+const FALLBACK_BUDGET_DIVISOR = 4;
+const BUDGET_ALERT_THRESHOLD_PERCENTAGE = 80;
+const BUDGET_OVER_PERCENTAGE = 100;
 
 export default function CartScreen() {
   const monthlyBudgetCents = useSessionStore((state) => state.onboarding.monthlyBudgetCents);
-  const items = MOCK_CART_ITEMS;
-  const spentCents = sumCents(items.map((item) => item.totalCents));
-  // Orçamento restante do mês contra o gasto desta compra — a soma do mês real chega com o histórico (onda 5).
-  const status = computeBudgetStatus(spentCents, Math.round(monthlyBudgetCents / 4));
+  const cart = useActiveCart();
+
+  const [editingItem, setEditingItem] = useState<CartItemRecord | null>(null);
+  const [undoToast, setUndoToast] = useState<{ item: CartItemRecord } | null>(null);
+
+  const previousPercentageRef = useRef(0);
+  const previousItemCountRef = useRef(cart.items.length);
+
+  useEffect(() => {
+    if (cart.budgetCents === null) {
+      void setCartBudget(Math.round(monthlyBudgetCents / FALLBACK_BUDGET_DIVISOR));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só inicializa 1x quando o carrinho nasce sem orçamento
+  }, [cart.budgetCents]);
+
+  const budgetCents = cart.budgetCents ?? Math.round(monthlyBudgetCents / FALLBACK_BUDGET_DIVISOR);
+  const status = computeBudgetStatus(cart.totalCents, budgetCents);
+
+  useEffect(() => {
+    const previous = previousPercentageRef.current;
+    if (previous < BUDGET_OVER_PERCENTAGE && status.percentage >= BUDGET_OVER_PERCENTAGE) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } else if (
+      previous < BUDGET_ALERT_THRESHOLD_PERCENTAGE &&
+      status.percentage >= BUDGET_ALERT_THRESHOLD_PERCENTAGE
+    ) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+    previousPercentageRef.current = status.percentage;
+  }, [status.percentage]);
+
+  useEffect(() => {
+    if (cart.items.length > previousItemCountRef.current) {
+      AccessibilityInfo.announceForAccessibility(`Total do carrinho: ${formatCentsToBRL(cart.totalCents)}`);
+    }
+    previousItemCountRef.current = cart.items.length;
+  }, [cart.items.length, cart.totalCents]);
+
+  function handleRemove(item: CartItemRecord) {
+    void removeCartItem(item.clientId);
+    setEditingItem((current) => (current?.clientId === item.clientId ? null : current));
+    setUndoToast({ item });
+  }
+
+  async function handleUndoRemove(item: CartItemRecord) {
+    await addCartItem({
+      ean: item.ean,
+      productName: item.productName,
+      category: item.category,
+      unit: item.unit,
+      unitPriceCents: item.unitPriceCents,
+      quantityMilli: item.quantityMilli,
+      isOffer: item.isOffer,
+      productId: item.productId,
+    });
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="flex-1 gap-4 px-4 pt-2">
-        <Text variant="footnote" color="muted">
-          Compra em andamento · {MOCK_MARKET_NAME}
-        </Text>
+        <View className="flex-row items-center justify-between">
+          <Text variant="footnote" color="muted">
+            Compra em andamento{cart.marketName ? ` · ${cart.marketName}` : ""}
+          </Text>
+          <Text variant="caption" color="muted" accessibilityLabel="Carrinho salvo no aparelho, sincroniza quando tiver internet">
+            Salvo no aparelho
+          </Text>
+        </View>
 
         <Card>
           <BudgetBar status={status} />
         </Card>
 
-        {items.length === 0 ? (
+        {cart.items.length === 0 ? (
           <EmptyCart />
         ) : (
-          <FlashList<CartItem>
-            data={items}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <CartItemRow item={item} />}
+          <FlashList<CartItemRecord>
+            data={cart.items}
+            keyExtractor={(item) => item.clientId}
+            renderItem={({ item }) => (
+              <CartItemRow item={item} onPress={setEditingItem} onRemove={handleRemove} />
+            )}
             ItemSeparatorComponent={() => <View className="h-2" />}
             contentContainerStyle={{ paddingBottom: 24 }}
             showsVerticalScrollIndicator={false}
           />
         )}
       </View>
+
+      <CartItemEditSheet item={editingItem} onClose={() => setEditingItem(null)} onRemove={handleRemove} />
+
+      {undoToast ? (
+        <ScanToast
+          message="Item removido"
+          actionLabel="Desfazer"
+          onAction={() => void handleUndoRemove(undoToast.item)}
+          onDismiss={() => setUndoToast(null)}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

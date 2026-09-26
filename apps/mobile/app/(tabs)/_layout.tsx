@@ -1,5 +1,6 @@
-import { Redirect, Tabs } from "expo-router";
+import { Redirect, Tabs, useGlobalSearchParams } from "expo-router";
 import { Clock, ScanLine, ShoppingCart, Tag, User } from "lucide-react-native";
+import { useEffect, useState } from "react";
 
 import { ScanTabButton } from "@/components/navigation/scan-tab-button";
 import { useSessionStore } from "@/lib/store/session-store";
@@ -14,8 +15,21 @@ export default function TabsLayout() {
   const surfaceColor = useThemeColor("surface");
   const borderColor = useThemeColor("border");
 
-  if (!isAuthenticated) return <Redirect href="/(auth)/welcome" />;
-  if (!onboardingComplete) return <Redirect href="/(onboarding)/city" />;
+  // `?demo=1` pula login/onboarding — só existe pra validar UI sem câmera (Playwright/CI),
+  // ver `lib/scan/demo-fixtures.ts`. Nunca acontece em uso real (ninguém digita isso). "Trava"
+  // no primeiro render porque trocar de aba (tab bar do React Navigation) não repassa a
+  // query string pras outras abas — e esse layout não desmonta entre abas irmãs.
+  const params = useGlobalSearchParams() as Record<string, string | undefined>;
+  const [demoPreviewLatched, setDemoPreviewLatched] = useState(false);
+  useEffect(() => {
+    if (params.demo === "1") setDemoPreviewLatched(true);
+  }, [params.demo]);
+  const isDemoPreview = demoPreviewLatched || params.demo === "1";
+
+  if (!isDemoPreview) {
+    if (!isAuthenticated) return <Redirect href="/(auth)/welcome" />;
+    if (!onboardingComplete) return <Redirect href="/(onboarding)/city" />;
+  }
 
   return (
     <Tabs
@@ -40,7 +54,10 @@ export default function TabsLayout() {
         name="history"
         options={{
           title: "Histórico",
-          tabBarIcon: ({ color, focused }) => <Clock size={24} color={color} fill={focused ? color : "none"} />,
+          // `Clock` preenchido vira uma bolinha sólida (o ponteiro, do mesmo traço da cor,
+          // some dentro do disco cheio) — ao contrário de ícones fechados (carrinho, tag,
+          // pessoa), ele não tem um "preenchido" que funcione. Estado ativo só por cor + traço.
+          tabBarIcon: ({ color, focused }) => <Clock size={24} color={color} strokeWidth={focused ? 2.5 : 2} />,
         }}
       />
       <Tabs.Screen

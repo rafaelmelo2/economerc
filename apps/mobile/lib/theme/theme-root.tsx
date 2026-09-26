@@ -1,7 +1,7 @@
 import { colorScheme, useColorScheme as useNativeWindColorScheme, vars } from "nativewind";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { Appearance, View } from "react-native";
+import { Appearance, Platform, View } from "react-native";
 
 import { buildCssVars } from "./tokens";
 
@@ -30,6 +30,19 @@ export function ThemeRoot({ children }: { children: ReactNode }) {
   }, []);
 
   const scheme = activeScheme === "dark" ? "dark" : "light";
+
+  // Web: `Modal`/react-native-web portais o conteúdo pra fora de `#root` (direto em
+  // `document.body`, via `ReactDOM.createPortal`) — CSS custom properties só cascateiam por
+  // ascendência no DOM, então uma sheet/dialog herdava zero var() e pintava tudo transparente.
+  // Espelhar as mesmas vars em `:root` cobre qualquer conteúdo portado, sem duplicar a fonte
+  // dos tokens. Nativo ignora (`vars()` do NativeWind já resolve via runtime, não CSS real).
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const cssVars = buildCssVars(scheme);
+    for (const [key, value] of Object.entries(cssVars)) {
+      document.documentElement.style.setProperty(key, value);
+    }
+  }, [scheme]);
 
   return <View style={[{ flex: 1 }, vars(buildCssVars(scheme))]}>{children}</View>;
 }

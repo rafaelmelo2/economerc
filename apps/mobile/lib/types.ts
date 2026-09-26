@@ -13,17 +13,6 @@ export type CategoryKey =
   | "higiene"
   | "outros";
 
-export interface CartItem {
-  id: string;
-  name: string;
-  category: CategoryKey;
-  quantityLabel: string;
-  unitPriceCents: number;
-  unitLabel: "kg" | "L";
-  totalCents: number;
-  isOffer: boolean;
-}
-
 export type BudgetState = "ok" | "warning" | "over";
 
 export interface BudgetStatus {

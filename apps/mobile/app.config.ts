@@ -28,6 +28,12 @@ const config: ExpoConfig = {
     "expo-router",
     "expo-secure-store",
     [
+      "expo-camera",
+      {
+        cameraPermission: "O EconoMerc usa a câmera para ler o código de barras dos produtos.",
+      },
+    ],
+    [
       "expo-splash-screen",
       {
         image: "./assets/splash-icon.png",
