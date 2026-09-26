@@ -1,10 +1,38 @@
 import { router } from "expo-router";
 import { Platform, View } from "react-native";
+import Svg, { Circle, Path } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useSessionStore, type AuthProvider } from "@/lib/store/session-store";
+
+/**
+ * Símbolo da marca (`docs/brand/logo/simbolo.svg`) — etiqueta de gôndola com o furo em amarelo.
+ * Cores fixas por regra de marca (`docs/brand/visual.md` → Logo: "nunca trocar o amarelo do
+ * furo"), não tokens de tema — o logomark não se adapta a claro/escuro.
+ */
+function BrandSymbol({ size = 56 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 96 96" role="img" aria-label="EconoMerc">
+      <Path
+        d="M40 10h38a8 8 0 0 1 8 8v60a8 8 0 0 1-8 8H40a8 8 0 0 1-5.66-2.34L12.34 61.66a8 8 0 0 1 0-11.32L34.34 12.34A8 8 0 0 1 40 10Z"
+        transform="rotate(-8 48 48)"
+        fill="#0E6B47"
+      />
+      <Circle cx={31} cy={54} r={6.5} fill="#FFC83D" />
+      <Path
+        d="M46 36l10 12 8-7 12 17"
+        fill="none"
+        stroke="#FFFFFF"
+        strokeWidth={6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M68 58h8v-8" fill="none" stroke="#FFFFFF" strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 export default function WelcomeScreen() {
   const signIn = useSessionStore((state) => state.signIn);
@@ -19,10 +47,8 @@ export default function WelcomeScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={["top", "bottom"]}>
       <View className="flex-1 justify-between px-6 py-8">
         <View className="gap-3 pt-12">
-          <View className="h-14 w-14 items-center justify-center rounded-lg bg-primary">
-            <Text variant="title-1" color="on-primary">
-              E
-            </Text>
+          <View className="h-14 w-14 items-center justify-center" accessibilityLabel="EconoMerc">
+            <BrandSymbol size={56} />
           </View>
           <Text variant="display" className="pt-4">
             Saiba quanto vai gastar antes do caixa.
