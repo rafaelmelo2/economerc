@@ -99,4 +99,40 @@ export const MIGRATIONS: readonly Migration[] = [
       `);
     },
   },
+  {
+    version: 2,
+    up: (db) => {
+      // Fila de notas fiscais lidas por QR (Onda 5, docs/nfce-sefaz-go.md) — UMA linha cobre as
+      // duas pontas: fila offline (status='queued' = ainda não chegou a mandar `POST /receipts`,
+      // reenviada quando a rede volta, `lib/receipts/queue.ts`) E cache local do estado do
+      // servidor (pending/processing/done/failed/duplicate, itens inclusos) pro histórico
+      // funcionar offline (rules/mobile.md > "SQLite é a fonte da verdade do aparelho").
+      // `client_id` (não um id de servidor) é a PK — nasce no app, único, e é a MESMA chave de
+      // idempotência que `POST /receipts` espera, então reenviar depois de um retry nunca duplica.
+      db.execSync(`
+        CREATE TABLE IF NOT EXISTS receipts (
+          client_id TEXT PRIMARY KEY NOT NULL,
+          server_id TEXT,
+          qr_text TEXT NOT NULL,
+          access_key TEXT NOT NULL,
+          cart_client_id TEXT,
+          status TEXT NOT NULL DEFAULT 'queued',
+          failure_reason TEXT,
+          market_id TEXT,
+          market_name TEXT,
+          issued_at TEXT,
+          total_amount_cents INTEGER,
+          discount_amount_cents INTEGER,
+          items_json TEXT NOT NULL DEFAULT '[]',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          last_synced_at TEXT,
+          attempts INTEGER NOT NULL DEFAULT 0,
+          next_attempt_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS ix_receipts_status ON receipts (status);
+        CREATE INDEX IF NOT EXISTS ix_receipts_cart_client_id ON receipts (cart_client_id);
+      `);
+    },
+  },
 ];

@@ -1,7 +1,7 @@
 import { palette } from "@economerc/design-tokens/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Haptics from "expo-haptics";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,10 +13,12 @@ import { ScanFrame } from "@/components/scan/scan-frame";
 import { ScanToast } from "@/components/scan/toast";
 import { Text } from "@/components/ui/text";
 import type { CartItemRecord } from "@/lib/cart/contract";
+import { enqueueReceiptFromQr } from "@/lib/receipts/queue";
 import { buildDemoLookupResult, demoEanAt } from "@/lib/scan/demo-fixtures";
-import { isNfceQrValue } from "@/lib/scan/nfce-qr";
 import { validateGtin } from "@/lib/scan/gtin";
+import { validateNfceQr } from "@/lib/scan/nfce-qr";
 import { lookupProductByEan } from "@/lib/scan/product-lookup";
+import { scheduleSyncSoon } from "@/lib/sync/engine";
 
 /** Mesmo código lido duas vezes em menos disso é ruído da câmera, não uma nova leitura. */
 const SCAN_DEBOUNCE_MS = 1500;
@@ -28,6 +30,11 @@ export default function ScanScreen() {
   const params = useLocalSearchParams() as Record<string, string | undefined>;
   const isDemo = params.demo === "1";
   const forcedDeniedPermission = isDemo && params.permission === "denied";
+  // `?intent=receipt&cartClientId=` — vindo de "Finalizar compra" → "Ler a nota agora"
+  // (`app/(tabs)/index.tsx`). Só troca a dica de texto; o scanner continua reconhecendo
+  // código de barras normalmente (o usuário pode ter mudado de ideia).
+  const isReceiptIntent = params.intent === "receipt";
+  const originCartClientId = params.cartClientId && params.cartClientId.length > 0 ? params.cartClientId : null;
 
   const [permission, requestPermission] = useCameraPermissions();
   const [torchOn, setTorchOn] = useState(false);
@@ -59,14 +66,37 @@ export default function ScanScreen() {
     setConfirmTarget({ kind: "scan", ean: demoEanAt(index), lookup: buildDemoLookupResult(index) });
   }, []);
 
+  function handleQrScanned(data: string) {
+    const validation = validateNfceQr(data);
+    if (!validation.valid || !validation.accessKey) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      const message =
+        validation.reason === "wrong-model"
+          ? "Esse QR é de uma nota de outro tipo, não de uma compra de mercado."
+          : validation.reason === "invalid-check-digit"
+            ? "QR da nota não confere. Tenta ler de novo."
+            : "Não reconhecemos esse QR code";
+      showBanner(message);
+      return;
+    }
+
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const receipt = enqueueReceiptFromQr({
+      qrText: data,
+      accessKey: validation.accessKey,
+      cartClientId: originCartClientId,
+    });
+    scheduleSyncSoon();
+    router.push({ pathname: "/receipt/[localId]", params: { localId: receipt.client_id } });
+  }
+
   function handleBarcodeScanned(data: string, type: string) {
     const now = Date.now();
     if (lastScanRef.current?.code === data && now - lastScanRef.current.at < SCAN_DEBOUNCE_MS) return;
     lastScanRef.current = { code: data, at: now };
 
     if (type === "qr") {
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      showBanner(isNfceQrValue(data) ? "Leitura de nota chega em breve" : "Não reconhecemos esse QR code");
+      handleQrScanned(data);
       return;
     }
 
@@ -129,6 +159,7 @@ export default function ScanScreen() {
           onManualEntry={() => setManualEntryVisible(true)}
           onNoBarcode={() => setConfirmTarget({ kind: "no-code" })}
           banner={banner ?? undefined}
+          hint={isReceiptIntent ? "Aponte para o QR Code da nota fiscal" : undefined}
         />
 
         {isDemo ? (

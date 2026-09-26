@@ -16,6 +16,7 @@ import {
   markOutboxAttemptFailed,
 } from "@/lib/db/outbox-repository";
 import { getSyncCursor, setSyncCursor } from "@/lib/db/sync-state-repository";
+import { syncReceiptsQueue } from "@/lib/receipts/queue";
 
 import { applyPulledChangeToDb } from "./apply-pull";
 import { buildPushBatch } from "./push-batch";
@@ -96,6 +97,7 @@ export async function triggerSyncNow(): Promise<void> {
   try {
     await drainOutbox();
     await pullChanges();
+    await syncReceiptsQueue(); // fila de notas (lib/receipts/queue.ts) — mesmos gatilhos, erro próprio
     store.setStatus("idle");
     store.setLastError(null);
     store.setLastSyncedAt(new Date().toISOString());

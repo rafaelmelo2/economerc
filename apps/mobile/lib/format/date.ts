@@ -1,10 +1,17 @@
 // Datas em pt-BR via `Intl` — nunca strings de mês/dia na mão (ver `.claude/rules/mobile.md`).
 const MONTH_LABEL_FORMATTER = new Intl.DateTimeFormat("pt-BR", { month: "long" });
+const MONTH_YEAR_LABEL_FORMATTER = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" });
 const DAY_MONTH_FORMATTER = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short" });
 
 /** "Setembro" — cabeçalho do histórico por mês. */
 export function formatMonthLabel(date: Date): string {
   const label = MONTH_LABEL_FORMATTER.format(date);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+/** "Setembro de 2026" — seletor de mês do histórico (precisa do ano ao navegar entre anos). */
+export function formatMonthYearLabel(date: Date): string {
+  const label = MONTH_YEAR_LABEL_FORMATTER.format(date);
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 

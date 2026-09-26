@@ -16,4 +16,9 @@ config.resolver.nodeModulesPaths = [
 ];
 config.resolver.disableHierarchicalLookup = false;
 
+// `expo-sqlite` no web carrega o wa-sqlite via `.wasm` (worker.ts faz `import "./wa-sqlite.wasm"`)
+// — sem isso no `assetExts`, o Metro tenta resolver como módulo JS e `expo export --platform web`
+// quebra em qualquer tela que toque `expo-sqlite` (Onda 5: histórico e nota, além do carrinho).
+config.resolver.assetExts = [...config.resolver.assetExts, "wasm"];
+
 module.exports = withNativeWind(config, { input: "./global.css" });
