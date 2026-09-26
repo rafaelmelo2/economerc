@@ -2,6 +2,7 @@
 próprio nesta onda — consumido pelos futuros workers de NFC-e/crawler (Onda 4)."""
 
 from dataclasses import dataclass
+from decimal import Decimal
 from uuid import UUID
 
 from asyncpg import Connection
@@ -47,6 +48,21 @@ class ProductAliasRepository:
             product_id,
         )
         return dict(row) if row else None
+
+    async def set_suggested_match(
+        self, conn: Connection, alias_id: UUID, product_id: UUID, score: Decimal
+    ) -> None:
+        """Guarda a melhor sugestão do RapidFuzz (bloco 4C) mesmo sem auto-linkar."""
+        await conn.execute(
+            """
+            UPDATE product_aliases
+               SET suggested_product_id = $2, suggested_match_score = $3
+             WHERE id = $1
+            """,
+            alias_id,
+            product_id,
+            score,
+        )
 
 
 product_alias_repository = ProductAliasRepository()

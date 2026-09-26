@@ -64,6 +64,11 @@ class ProductRepository:
         )
         return dict(row) if row else None
 
+    async def list_id_and_name(self, conn: Connection) -> list[dict]:
+        """Universo candidato do RapidFuzz (bloco 4C) — só `id`/`name`, catálogo ainda pequeno."""
+        rows = await conn.fetch("SELECT id, name FROM products WHERE deleted_at IS NULL")
+        return [dict(row) for row in rows]
+
     async def create(self, conn: Connection, product: NewProduct) -> dict:
         row = await conn.fetchrow(
             """

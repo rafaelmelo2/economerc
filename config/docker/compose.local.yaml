@@ -68,3 +68,30 @@ services:
       - ./backend/config:/app/config:ro
     # Sem --reload (não é servidor HTTP); reinicia via `restart: always` se cair.
     command: ["python3", "-m", "api.workers.receipts_worker"]
+
+  # Bloco 4C — mesmo padrão de bind-mount do `backend` acima (hot reload sem rebuild).
+  whatsapp-offer-worker:
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc_local?sslmode=disable
+      ENVIRONMENT: local
+      SERVICE_NAME: economerc-whatsapp-offer-worker
+      APP_ENV: local
+      LOG_LEVEL: DEBUG
+      LOG_FORMAT: console
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/config:/app/config:ro
+    command: ["python", "-m", "api.workers.whatsapp_offer_worker"]
+
+  supercatalao-collector:
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc_local?sslmode=disable
+      ENVIRONMENT: local
+      SERVICE_NAME: economerc-supercatalao-collector
+      APP_ENV: local
+      LOG_LEVEL: DEBUG
+      LOG_FORMAT: console
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/config:/app/config:ro
+    command: ["python", "-m", "api.workers.collect_supercatalao"]

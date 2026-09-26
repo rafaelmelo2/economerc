@@ -176,6 +176,12 @@ class Settings(BaseModel):
     google_web_client_secret: SecretStr | None = Field(
         default_factory=lambda: _opt("GOOGLE_WEB_CLIENT_SECRET")
     )
+    # Segredo compartilhado do webhook da Evolution API (bloco 4C, `routes/collectors/
+    # whatsapp_webhook.py`). Opcional como os demais secrets — sem ele, o webhook nega tudo
+    # (fail-closed), nunca aceita sem verificação.
+    whatsapp_webhook_secret: SecretStr | None = Field(
+        default_factory=lambda: _opt("WHATSAPP_WEBHOOK_SECRET")
+    )
 
     @field_validator("jwt_secret_key")
     @classmethod

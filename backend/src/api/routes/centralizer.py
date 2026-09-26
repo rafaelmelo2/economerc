@@ -5,6 +5,9 @@ from api.routes.catalog.category import router as category_router
 from api.routes.catalog.product import router as product_router
 from api.routes.categorization.admin_run import router as categorization_admin_router
 from api.routes.categorization.product_category import router as product_category_router
+from api.routes.collectors.offer_candidates_admin import router as offer_candidates_admin_router
+from api.routes.collectors.supercatalao_admin import router as supercatalao_admin_router
+from api.routes.collectors.whatsapp_webhook import router as whatsapp_webhook_router
 from api.routes.geo.city import router as city_router
 from api.routes.health import router as health_router
 from api.routes.markets.market import router as market_router
@@ -29,3 +32,6 @@ api_router.include_router(ocr_price_tag_router)
 api_router.include_router(product_category_router)
 api_router.include_router(categorization_admin_router)
 api_router.include_router(receipt_router)
+api_router.include_router(supercatalao_admin_router)
+api_router.include_router(offer_candidates_admin_router)
+api_router.include_router(whatsapp_webhook_router)
