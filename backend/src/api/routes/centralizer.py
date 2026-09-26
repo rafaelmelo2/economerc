@@ -10,6 +10,7 @@ from api.routes.health import router as health_router
 from api.routes.markets.market import router as market_router
 from api.routes.ocr.price_tag import router as ocr_price_tag_router
 from api.routes.prices.price import router as price_router
+from api.routes.receipts.receipt import router as receipt_router
 from api.routes.sync.pull import router as sync_pull_router
 from api.routes.sync.push import router as sync_push_router
 from config.api import api_config
@@ -27,3 +28,4 @@ api_router.include_router(price_router)
 api_router.include_router(ocr_price_tag_router)
 api_router.include_router(product_category_router)
 api_router.include_router(categorization_admin_router)
+api_router.include_router(receipt_router)

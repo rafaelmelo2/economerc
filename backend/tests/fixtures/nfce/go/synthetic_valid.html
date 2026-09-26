@@ -1,0 +1,61 @@
+<!--
+Fixture SINTÉTICA — não é uma nota real. Layout inspirado no padrão de DANFE NFC-e HTML
+descrito em docs/nfce-sefaz-go.md (tabela de itens Código/Descrição/Qtde/UN/Vl. Unit/Vl.
+Total + bloco do emitente com CNPJ), até o dono do projeto trazer amostras reais de Catalão.
+Traz um CPF de propósito para testar a redação (LGPD) antes de persistir o bruto.
+-->
+<!DOCTYPE html>
+<html>
+<head><title>NFC-e</title></head>
+<body>
+  <div class="emitente">
+    <span class="nome">SUPERMERCADO MODELO LTDA</span>
+    <span class="cnpj">CNPJ: 12.345.678/0001-95</span>
+    <span class="endereco">RUA MODELO, 123 - CENTRO - CATALAO/GO</span>
+  </div>
+  <div class="consumidor">
+    CPF do consumidor: 123.456.789-00
+  </div>
+  <table class="itens">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Descrição</th>
+        <th>Qtde</th>
+        <th>UN</th>
+        <th>EAN</th>
+        <th>NCM</th>
+        <th>Vl. Unit</th>
+        <th>Vl. Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>0001</td>
+        <td>ARROZ TIPO 1 5KG</td>
+        <td>2,000</td>
+        <td>UN</td>
+        <td>7891234567895</td>
+        <td>10063000</td>
+        <td>25,90</td>
+        <td>51,80</td>
+      </tr>
+      <tr>
+        <td>0002</td>
+        <td>FEIJAO CARIOCA 1KG</td>
+        <td>3,000</td>
+        <td>UN</td>
+        <td></td>
+        <td></td>
+        <td>7,50</td>
+        <td>22,50</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="totais">
+    <span class="valor-total">Valor total R$ 74,30</span>
+    <span class="valor-desconto">Desconto R$ 0,00</span>
+  </div>
+  <div class="emissao">Emissão: 15/09/2026 14:32:10</div>
+</body>
+</html>

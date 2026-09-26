@@ -181,6 +181,48 @@ services:
         max-file: "10"
         compress: "true"
 
+  # Bloco 4A (docs/fases-construcao.md > Onda 4): consumidor durável de `receipts.ingest`
+  # (mesma imagem do backend, comando diferente). Editado aqui só como contrato de infra —
+  # NUNCA subido por este agente (regras críticas da tarefa).
+  receipts-worker:
+    container_name: economerc-receipts-worker
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_UID: ${APP_UID:-1000}
+    <<: *no-new-privs
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc?sslmode=disable
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+    command: ["python3", "-m", "api.workers.receipts_worker"]
+    volumes:
+      - ./config/app/${ENVIRONMENT}.yaml:/app/app.yaml:ro
+      - valkey-sock:/run/valkey:ro
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: always
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+        compress: "true"
+
 volumes:
   pgdata:
   valkey-data:

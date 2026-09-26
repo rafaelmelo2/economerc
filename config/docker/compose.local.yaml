@@ -54,3 +54,17 @@ services:
         "-c",
         "uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload --app-dir src",
       ]
+
+  receipts-worker:
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc_local?sslmode=disable
+      ENVIRONMENT: local
+      SERVICE_NAME: economerc-receipts-worker
+      APP_ENV: local
+      LOG_LEVEL: DEBUG
+      LOG_FORMAT: console
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/config:/app/config:ro
+    # Sem --reload (não é servidor HTTP); reinicia via `restart: always` se cair.
+    command: ["python3", "-m", "api.workers.receipts_worker"]

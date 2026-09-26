@@ -60,6 +60,13 @@ class MarketRepository:
         )
         return dict(row) if row else None
 
+    async def get_by_cnpj(self, conn: Connection, cnpj: str) -> dict | None:
+        """Usado pelo worker de NFC-e (bloco 4A) — CNPJ do emitente identifica o mercado."""
+        row = await conn.fetchrow(
+            "SELECT * FROM markets WHERE cnpj = $1 AND deleted_at IS NULL", cnpj
+        )
+        return dict(row) if row else None
+
     async def create(self, conn: Connection, market: NewMarket) -> dict:
         row = await conn.fetchrow(
             """
