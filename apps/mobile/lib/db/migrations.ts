@@ -135,4 +135,28 @@ export const MIGRATIONS: readonly Migration[] = [
       `);
     },
   },
+  {
+    version: 3,
+    up: (db) => {
+      // Bloco 6 — "Em qual mercado você está?" (docs/roadmap-fase1.md): cache local de
+      // `GET /markets?city_id=` pra o seletor funcionar offline (rules/mobile.md > "SQLite é a
+      // fonte da verdade do aparelho"). Uma linha por mercado da cidade ativa; `fetched_at` só
+      // informa a idade do cache, sem TTL — reconsultamos a cada abertura do seletor com rede.
+      db.execSync(`
+        CREATE TABLE IF NOT EXISTS markets_cache (
+          id TEXT PRIMARY KEY NOT NULL,
+          city_id TEXT NOT NULL,
+          trade_name TEXT NOT NULL,
+          address TEXT,
+          is_partner INTEGER NOT NULL DEFAULT 0,
+          fetched_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_markets_cache_city_id ON markets_cache (city_id);
+
+        -- Mensagem amigável pt-BR pro estado 'failed' (backend failure_message,
+        -- services/nfce/failure_messages.py) -- failure_reason continua só o detalhe técnico.
+        ALTER TABLE receipts ADD COLUMN failure_message TEXT;
+      `);
+    },
+  },
 ];

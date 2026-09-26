@@ -55,6 +55,16 @@ export interface SyncStateRow {
   last_synced_at: string | null;
 }
 
+/** Cache local de `GET /markets?city_id=` — seletor "Em qual mercado você está?" offline. */
+export interface MarketCacheRow {
+  id: string;
+  city_id: string;
+  trade_name: string;
+  address: string | null;
+  is_partner: number; // SQLite não tem boolean — 0/1
+  fetched_at: string;
+}
+
 export interface ProductCacheRow {
   ean: string;
   product_id: string | null;
@@ -91,6 +101,7 @@ export interface ReceiptRow {
   cart_client_id: string | null;
   status: ReceiptQueueStatus;
   failure_reason: string | null;
+  failure_message: string | null; // pt-BR amigável (backend `failure_message` ou rejeição local)
   market_id: string | null;
   market_name: string | null;
   issued_at: string | null;

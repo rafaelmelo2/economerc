@@ -61,6 +61,7 @@ function demoReceipt(overrides: Partial<ReceiptRow> & Pick<ReceiptRow, "client_i
     cart_client_id: null,
     status: "done",
     failure_reason: null,
+    failure_message: null,
     market_id: "demo-market",
     market_name: null,
     issued_at: now,

@@ -24,6 +24,14 @@ class CartItemRepository:
         )
         return dict(row) if row else None
 
+    async def list_active_by_cart(self, conn: Connection, cart_id: UUID) -> list[dict]:
+        """Itens sem tombstone de um carrinho — usado ao fechar a compra para gerar preço da
+        comunidade por item (`services/sync/sync_service.py`)."""
+        rows = await conn.fetch(
+            "SELECT * FROM cart_items WHERE cart_id = $1 AND deleted_at IS NULL", cart_id
+        )
+        return [dict(row) for row in rows]
+
     async def create(
         self,
         conn: Connection,

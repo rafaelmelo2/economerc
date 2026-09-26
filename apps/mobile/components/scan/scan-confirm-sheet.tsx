@@ -16,7 +16,7 @@ import {
   type ProductUnit,
 } from "@/lib/cart/contract";
 import { formatObservedAgo } from "@/lib/format/date";
-import { formatCentsAsBRLInput, parseBRLInputToCents } from "@/lib/format/money";
+import { formatCentsAsBRLInput, formatCentsToBRL, parseBRLInputToCents } from "@/lib/format/money";
 import { formatMilliToQuantityInput, parseQuantityInputToMilli } from "@/lib/format/quantity";
 import type { ProductLookupResult } from "@/lib/scan/product-lookup";
 import type { CategoryKey } from "@/lib/types";
@@ -57,13 +57,16 @@ function buildDraft(target: ScanConfirmTarget): DraftState {
 
   const found = target.lookup?.status === "found" ? target.lookup : null;
   const unit = found?.product.unit ?? "un";
+  // Só pré-preenche com o preço de OUTRO mercado quando ele é do mercado atual do carrinho —
+  // preço de referência não vira o preço daqui sem o usuário confirmar (bloco 6).
+  const priceCents = found?.price?.isCurrentMarket ? found.price.amountCents : 0;
 
   return {
     name: found?.product.name ?? "",
     category: DEFAULT_CATEGORY,
     unit,
     quantityText: formatMilliToQuantityInput(DEFAULT_QUANTITY_MILLI, unit),
-    priceCents: found?.price?.amountCents ?? 0,
+    priceCents,
     isOffer: false,
   };
 }
@@ -77,8 +80,14 @@ function headerCopy(target: ScanConfirmTarget): { title: string; subtitle: strin
     return { title: "Consultando…", subtitle: null };
   }
   if (target.lookup.status === "found") {
-    if (target.lookup.price) {
+    if (target.lookup.price?.isCurrentMarket) {
       return { title: target.lookup.product.name, subtitle: null };
+    }
+    if (target.lookup.price) {
+      return {
+        title: target.lookup.product.name,
+        subtitle: "Não é o preço daqui — confira e ajuste se for diferente.",
+      };
     }
     return {
       title: target.lookup.product.name,
@@ -174,10 +183,21 @@ export function ScanConfirmSheet({ target, onClose, onAdded }: ScanConfirmSheetP
               {knownPrice ? (
                 <View className="gap-1 rounded-md bg-surface-muted p-3">
                   <Text variant="callout" color="muted">
-                    Preço sugerido em{" "}
-                    <Text variant="callout" className="font-sans-semibold">
-                      {knownPrice.marketName}
-                    </Text>
+                    {knownPrice.isCurrentMarket ? (
+                      <>
+                        Preço sugerido em{" "}
+                        <Text variant="callout" className="font-sans-semibold">
+                          {knownPrice.marketName}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text variant="callout" className="font-sans-semibold tabular-nums">
+                          {formatCentsToBRL(knownPrice.amountCents)}
+                        </Text>
+                        {` no ${knownPrice.marketName} · não é o preço daqui`}
+                      </>
+                    )}
                   </Text>
                   <Text variant="footnote" color={knownPrice.isStale ? "warning" : "muted"} className="tabular-nums">
                     {formatObservedAgo(knownPrice.observedAt)}

@@ -19,6 +19,7 @@ export interface ReceiptResponseBody {
   stateCode: string;
   status: ReceiptStatus;
   failureReason: string | null;
+  failureMessage: string | null; // pt-BR amigável (`services/nfce/failure_messages.py`)
   attempts: number;
   marketId: string | null;
   issuedAt: string | null;

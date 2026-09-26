@@ -148,35 +148,56 @@ async def test_monthly_report_prefers_receipt_over_same_day_same_market_cart(
     market_z = await _market(db_conn, "Mercado Z")
     hortifruti = await _product(db_conn, "Banana", category_slug="hortifruti", ean="7890000000001")
     laticinios = await _product(db_conn, "Leite", category_slug="laticinios", ean="7890000000002")
-    sem_categoria = await _product(db_conn, "Item genérico", category_slug=None, ean="7890000000003")
+    sem_categoria = await _product(
+        db_conn, "Item genérico", category_slug=None, ean="7890000000003"
+    )
 
     # Carrinho + nota do MESMO mercado no MESMO dia — a nota vence, o carrinho some da soma.
     day_1 = _local_noon("2026-03-10")
     superseded_cart = await _closed_cart(db_conn, user_id, market_x["id"], day_1)
     await _cart_item(
-        db_conn, superseded_cart, user_id, product_id=hortifruti["id"], name="Banana",
+        db_conn,
+        superseded_cart,
+        user_id,
+        product_id=hortifruti["id"],
+        name="Banana",
         unit_price=Decimal("40.00"),
     )
     receipt_a = await _done_receipt(db_conn, user_id, market_x["id"], day_1, Decimal("42.50"))
     await _receipt_item(
-        db_conn, receipt_a, 1, product_id=hortifruti["id"], name="Banana",
-        unit_price=Decimal("42.50"), total_price=Decimal("42.50"),
+        db_conn,
+        receipt_a,
+        1,
+        product_id=hortifruti["id"],
+        name="Banana",
+        unit_price=Decimal("42.50"),
+        total_price=Decimal("42.50"),
     )
 
     # Carrinho SEM nota correspondente — conta pela soma dos itens.
     day_2 = _local_noon("2026-03-15")
     standalone_cart = await _closed_cart(db_conn, user_id, market_y["id"], day_2)
     await _cart_item(
-        db_conn, standalone_cart, user_id, product_id=laticinios["id"], name="Leite",
-        unit_price=Decimal("15.00"), quantity=Decimal("2"),
+        db_conn,
+        standalone_cart,
+        user_id,
+        product_id=laticinios["id"],
+        name="Leite",
+        unit_price=Decimal("15.00"),
+        quantity=Decimal("2"),
     )
 
     # Nota isolada, sem carrinho — conta pelo total_amount da nota.
     day_3 = _local_noon("2026-03-20")
     receipt_c = await _done_receipt(db_conn, user_id, market_z["id"], day_3, Decimal("9.90"))
     await _receipt_item(
-        db_conn, receipt_c, 1, product_id=sem_categoria["id"], name="Item genérico",
-        unit_price=Decimal("9.90"), total_price=Decimal("9.90"),
+        db_conn,
+        receipt_c,
+        1,
+        product_id=sem_categoria["id"],
+        name="Item genérico",
+        unit_price=Decimal("9.90"),
+        total_price=Decimal("9.90"),
     )
 
     res = await client.get("/api/reports/monthly", params={"month": "2026-03"}, headers=headers)
@@ -230,8 +251,13 @@ async def test_purchases_list_reports_origin_and_is_scoped_per_user(
     day_2 = _local_noon("2026-04-06")
     receipt = await _done_receipt(db_conn, user_id, market["id"], day_2, Decimal("20.00"))
     await _receipt_item(
-        db_conn, receipt, 1, product_id=None, name="Item nota",
-        unit_price=Decimal("20.00"), total_price=Decimal("20.00"),
+        db_conn,
+        receipt,
+        1,
+        product_id=None,
+        name="Item nota",
+        unit_price=Decimal("20.00"),
+        total_price=Decimal("20.00"),
     )
 
     # Compra de outro usuário nunca aparece na lista.
@@ -239,7 +265,11 @@ async def test_purchases_list_reports_origin_and_is_scoped_per_user(
     other_market = await _market(db_conn, "Mercado de Outro Usuário")
     other_cart = await _closed_cart(db_conn, other_user_id, other_market["id"], other_cart_day)
     await _cart_item(
-        db_conn, other_cart, other_user_id, product_id=None, name="Item de outro",
+        db_conn,
+        other_cart,
+        other_user_id,
+        product_id=None,
+        name="Item de outro",
         unit_price=Decimal("99.00"),
     )
 

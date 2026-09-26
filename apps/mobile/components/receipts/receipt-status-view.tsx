@@ -8,12 +8,13 @@ import type { ReceiptQueueStatus } from "@/lib/db/types";
 export interface ReceiptStatusViewProps {
   status: ReceiptQueueStatus;
   failureReason: string | null;
+  failureMessage: string | null;
 }
 
 /** Estados de acompanhamento da nota (`docs/brand/voz.md` > Nota fiscal) — pendente/processando
  * (mesmo texto: o usuário não distingue as duas), falhou, e o caso especial de duplicada com
  * texto amigável (item 2 do escopo), tratado à parte de "falhou" (não é um erro). */
-export function ReceiptStatusView({ status, failureReason }: ReceiptStatusViewProps) {
+export function ReceiptStatusView({ status, failureReason, failureMessage }: ReceiptStatusViewProps) {
   const primaryColor = useThemeColor("primary");
   const dangerColor = useThemeColor("danger");
   const mutedColor = useThemeColor("foreground-muted");
@@ -42,7 +43,8 @@ export function ReceiptStatusView({ status, failureReason }: ReceiptStatusViewPr
           Não conseguimos ler essa nota agora
         </Text>
         <Text variant="body" color="muted" className="text-center">
-          A consulta da nota está fora do ar agora. Vamos tentar de novo sozinhos e te avisamos.
+          {failureMessage ??
+            "A consulta da nota está fora do ar agora. Vamos tentar de novo sozinhos e te avisamos."}
         </Text>
         {failureReason ? (
           <Text variant="footnote" color="muted" className="text-center">

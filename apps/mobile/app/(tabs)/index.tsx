@@ -2,13 +2,14 @@ import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, View } from "react-native";
+import { AccessibilityInfo, Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CartItemEditSheet } from "@/components/cart/cart-item-edit-sheet";
 import { BudgetBar } from "@/components/cart/budget-bar";
 import { CartItemRow } from "@/components/cart/cart-item-row";
 import { EmptyCart } from "@/components/cart/empty-cart";
+import { MarketPickerSheet } from "@/components/cart/market-picker-sheet";
 import { ScanToast } from "@/components/scan/toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import {
   addCartItem,
   closeActiveCart,
   setCartBudget,
+  setCartMarket,
   removeCartItem,
   useActiveCart,
   type CartItemRecord,
@@ -33,6 +35,7 @@ const BUDGET_OVER_PERCENTAGE = 100;
 
 export default function CartScreen() {
   const monthlyBudgetCents = useSessionStore((state) => state.onboarding.monthlyBudgetCents);
+  const cityId = useSessionStore((state) => state.onboarding.cityId);
   const cart = useActiveCart();
 
   const [editingItem, setEditingItem] = useState<CartItemRecord | null>(null);
@@ -40,6 +43,7 @@ export default function CartScreen() {
   const [finishDialogOpen, setFinishDialogOpen] = useState(false);
   const [readReceiptPromptOpen, setReadReceiptPromptOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [marketPickerVisible, setMarketPickerVisible] = useState(false);
   const lastClosedCartClientIdRef = useRef<string | null>(null);
 
   const previousPercentageRef = useRef(0);
@@ -106,6 +110,16 @@ export default function CartScreen() {
     setReadReceiptPromptOpen(true);
   }
 
+  function handleSelectMarket(market: { id: string; tradeName: string }) {
+    void setCartMarket(market.id, market.tradeName);
+    setMarketPickerVisible(false);
+  }
+
+  function handleSelectOtherMarket(freeTextName: string) {
+    void setCartMarket(null, freeTextName);
+    setMarketPickerVisible(false);
+  }
+
   function handleReadReceiptNow() {
     setReadReceiptPromptOpen(false);
     router.push({
@@ -118,9 +132,20 @@ export default function CartScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <View className="flex-1 gap-4 px-4 pt-2">
         <View className="flex-row items-center justify-between">
-          <Text variant="footnote" color="muted">
-            Compra em andamento{cart.marketName ? ` · ${cart.marketName}` : ""}
-          </Text>
+          <Pressable
+            onPress={() => setMarketPickerVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              cart.marketName
+                ? `Compra em andamento no ${cart.marketName}. Tocar para trocar de mercado.`
+                : "Tocar para escolher em qual mercado você está"
+            }
+            className="min-h-touch-min flex-1 flex-row items-center py-1"
+          >
+            <Text variant="footnote" color="muted">
+              Compra em andamento · {cart.marketName ?? "toque para escolher o mercado"}
+            </Text>
+          </Pressable>
           <Text variant="caption" color="muted" accessibilityLabel="Carrinho salvo no aparelho, sincroniza quando tiver internet">
             Salvo no aparelho
           </Text>
@@ -155,6 +180,15 @@ export default function CartScreen() {
       ) : null}
 
       <CartItemEditSheet item={editingItem} onClose={() => setEditingItem(null)} onRemove={handleRemove} />
+
+      <MarketPickerSheet
+        visible={marketPickerVisible}
+        cityId={cityId}
+        currentMarketId={cart.marketId}
+        onClose={() => setMarketPickerVisible(false)}
+        onSelectMarket={handleSelectMarket}
+        onSelectOther={handleSelectOtherMarket}
+      />
 
       {undoToast ? (
         <ScanToast

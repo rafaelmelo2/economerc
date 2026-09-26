@@ -10,9 +10,10 @@ export function insertReceipt(db: SQLiteDatabase, row: ReceiptRow): void {
   db.runSync(
     `INSERT INTO receipts
        (client_id, server_id, qr_text, access_key, cart_client_id, status, failure_reason,
-        market_id, market_name, issued_at, total_amount_cents, discount_amount_cents,
-        items_json, created_at, updated_at, last_synced_at, attempts, next_attempt_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        failure_message, market_id, market_name, issued_at, total_amount_cents,
+        discount_amount_cents, items_json, created_at, updated_at, last_synced_at, attempts,
+        next_attempt_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     row.client_id,
     row.server_id,
     row.qr_text,
@@ -20,6 +21,7 @@ export function insertReceipt(db: SQLiteDatabase, row: ReceiptRow): void {
     row.cart_client_id,
     row.status,
     row.failure_reason,
+    row.failure_message,
     row.market_id,
     row.market_name,
     row.issued_at,

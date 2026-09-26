@@ -3,6 +3,7 @@ export * from "./schemas/auth";
 export * from "./schemas/category";
 export * from "./schemas/city";
 export * from "./schemas/health";
+export * from "./schemas/market";
 export * from "./schemas/me";
 export * from "./schemas/paged-response";
 export * from "./schemas/product";

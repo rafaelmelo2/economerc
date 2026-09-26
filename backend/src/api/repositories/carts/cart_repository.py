@@ -24,6 +24,12 @@ class CartRepository:
         )
         return dict(row) if row else None
 
+    async def get_by_id(self, conn: Connection, cart_id: UUID) -> dict | None:
+        """Usado quando só se tem o `cart_id` interno (FK de `cart_items`), não o `client_id`
+        do dono — ver `services/sync/sync_service.py` > geração de preço da comunidade."""
+        row = await conn.fetchrow("SELECT * FROM carts WHERE id = $1", cart_id)
+        return dict(row) if row else None
+
     async def create(
         self,
         conn: Connection,

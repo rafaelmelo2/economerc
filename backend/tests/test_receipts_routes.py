@@ -6,9 +6,11 @@ Chaves de acesso válidas calculadas com o mesmo algoritmo mod11 do parser
 
 import orjson
 import pytest
+from asyncpg import Connection
 from httpx import AsyncClient
 
 from api.core.nats_client import nats_client
+from tests.sync_helpers import auth_headers, create_test_user
 
 VALID_GO_KEY = "52250911222333000181650010001234561123456786"
 VALID_GO_KEY_2 = "52250998765432000199650010000000421876543210"
@@ -182,3 +184,47 @@ async def test_get_receipt_returns_items_and_404_for_other_users_receipt(
 
     stranger_res = await client.get(f"/api/receipts/{receipt_id}", headers=stranger_headers)
     assert stranger_res.status_code == 404
+
+
+async def test_get_receipt_exposes_friendly_failure_message_for_note_not_found(
+    client: AsyncClient, db_conn: Connection
+):
+    """`failure_reason` (técnico, gravado pelo worker) NUNCA aparece pro usuário — a API
+    também devolve `failure_message` amigável (`docs/brand/voz.md`), derivado na resposta."""
+    user_id = await create_test_user(db_conn)
+    receipt_id = await db_conn.fetchval(
+        """
+        INSERT INTO receipts (user_id, client_id, access_key, state_code, qr_url, status,
+                               failure_reason, attempts)
+        VALUES ($1, gen_random_uuid(), $2, 'GO', 'https://nfce.example/qr', 'failed', $3, 1)
+        RETURNING id
+        """,
+        user_id,
+        VALID_GO_KEY,
+        "SEFAZ-GO: Não foi possível encontrar o XML da nota",
+    )
+
+    res = await client.get(f"/api/receipts/{receipt_id}", headers=auth_headers(user_id))
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["failure_reason"] == "SEFAZ-GO: Não foi possível encontrar o XML da nota"
+    assert body["failure_message"] == (
+        "Não encontramos essa nota na SEFAZ. Confira se o QR é de um cupom fiscal de Goiás."
+    )
+
+
+async def test_get_receipt_failure_message_is_null_while_still_pending(
+    client: AsyncClient, bearer, fake_jetstream
+):
+    owner_headers = await bearer()
+    created = await client.post(
+        "/api/receipts",
+        json={"qr_text": VALID_QR_TEXT_2, "client_id": "88888888-8888-8888-8888-888888888888"},
+        headers=owner_headers,
+    )
+    receipt_id = created.json()["id"]
+
+    res = await client.get(f"/api/receipts/{receipt_id}", headers=owner_headers)
+    assert res.status_code == 200
+    assert res.json()["failure_message"] is None

@@ -101,11 +101,15 @@ export default function ReceiptTrackingScreen() {
                 </Text>
               </Card>
             ) : (
-              <ReceiptStatusView status={row.status} failureReason={row.failure_reason} />
+              <ReceiptStatusView
+                status={row.status}
+                failureReason={row.failure_reason}
+                failureMessage={row.failure_message}
+              />
             )}
 
             {row.status === "duplicate" ? (
-              <ReceiptStatusView status="duplicate" failureReason={null} />
+              <ReceiptStatusView status="duplicate" failureReason={null} failureMessage={null} />
             ) : null}
 
             {comparison && linkedCart ? (
