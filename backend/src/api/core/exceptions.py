@@ -57,6 +57,18 @@ class BadRequestError(BaseAPIExceptionError):
     DETAIL = "Requisição inválida."
 
 
+class UnauthorizedError(BaseAPIExceptionError):
+    TITLE = "Não autenticado"
+    STATUS = status.HTTP_401_UNAUTHORIZED
+    DETAIL = "Sessão inválida ou expirada. Entre de novo."
+
+
+class ForbiddenError(BaseAPIExceptionError):
+    TITLE = "Sem permissão"
+    STATUS = status.HTTP_403_FORBIDDEN
+    DETAIL = "Você não tem permissão para esta ação."
+
+
 async def api_exception_handler(
     request: Request, exc: BaseAPIExceptionError
 ) -> CustomORJSONResponse:
