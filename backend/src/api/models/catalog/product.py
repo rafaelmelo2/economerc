@@ -13,6 +13,8 @@ class Product(BaseModel):
     name: str
     brand: str | None
     category_id: UUID | None
+    category_source: str | None
+    ncm: str | None
     unit: str
     net_quantity: Decimal | None
     image_upload_id: UUID | None

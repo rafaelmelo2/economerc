@@ -93,6 +93,14 @@ def _db_schema():
     )
 
 
+@pytest.fixture(autouse=True)
+def _uploads_dir(tmp_path, monkeypatch):
+    """Isola `config.uploads.uploads_dir()` por teste — nunca escreve na pasta real
+    (`backend/uploads/`, montada no compose). Lido por chamada, então o monkeypatch
+    já vale para qualquer `save_upload` dentro do teste."""
+    monkeypatch.setenv("UPLOADS_DIR", str(tmp_path / "uploads"))
+
+
 @pytest.fixture
 async def db_conn():
     """Conexão isolada por teste — transação com rollback ao final (F.I.R.S.T)."""

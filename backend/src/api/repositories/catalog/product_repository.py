@@ -109,6 +109,40 @@ class ProductRepository:
         )
         return dict(row) if row else None
 
+    async def update_category(
+        self, conn: Connection, product_id: UUID, category_id: UUID, category_source: str
+    ) -> dict | None:
+        """Categorização (regra/IA/correção manual) — nunca mexe em `name`/`brand`/etc."""
+        row = await conn.fetchrow(
+            """
+            UPDATE products
+               SET category_id     = $2,
+                   category_source = $3,
+                   updated_at      = now()
+             WHERE id = $1
+               AND deleted_at IS NULL
+             RETURNING *
+            """,
+            product_id,
+            category_id,
+            category_source,
+        )
+        return dict(row) if row else None
+
+    async def list_uncategorized(self, conn: Connection, limit: int) -> list[dict]:
+        """Job em lote (`POST /api/admin/categorization/run`) — só o que ainda não tem
+        categoria; correção manual (`category_source='user'`) nunca é reprocessada aqui."""
+        rows = await conn.fetch(
+            """
+            SELECT * FROM products
+             WHERE category_id IS NULL AND deleted_at IS NULL
+             ORDER BY created_at, id
+             LIMIT $1
+            """,
+            limit,
+        )
+        return [dict(row) for row in rows]
+
     async def soft_delete(self, conn: Connection, product_id: UUID) -> bool:
         deleted_id = await conn.fetchval(
             """
