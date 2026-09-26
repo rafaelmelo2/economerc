@@ -1,0 +1,32 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "economerc",
+    },
+    "packages/design-tokens": {
+      "name": "@economerc/design-tokens",
+      "version": "0.1.0",
+    },
+    "packages/shared": {
+      "name": "@economerc/shared",
+      "version": "0.1.0",
+      "dependencies": {
+        "zod": "^4.0.0",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.0",
+      },
+    },
+  },
+  "packages": {
+    "@economerc/design-tokens": ["@economerc/design-tokens@workspace:packages/design-tokens"],
+
+    "@economerc/shared": ["@economerc/shared@workspace:packages/shared"],
+
+    "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "zod": ["zod@4.6.5", "", {}, "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="],
+  }
+}

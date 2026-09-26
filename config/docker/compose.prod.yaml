@@ -1,0 +1,43 @@
+# Override de ambiente PROD — nada publicado exceto loopback (Nginx entra em onda
+# futura). Granian multi-worker via Dockerfile CMD (sem override de `command`).
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: economerc_prod
+    ports:
+      - "127.0.0.1:5442:5432"
+
+  valkey:
+    ports:
+      - "127.0.0.1:6389:6379"
+
+  nats:
+    ports:
+      - "127.0.0.1:4232:4222"
+      - "127.0.0.1:8232:8222"
+
+  migrate:
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc_prod?sslmode=disable
+
+  backend:
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc_prod?sslmode=disable
+      ENVIRONMENT: prod
+      SERVICE_NAME: economerc-backend
+      APP_ENV: prod
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      GRANIAN_INTERFACE: asgi
+      GRANIAN_HOST: 0.0.0.0
+      GRANIAN_PORT: "8000"
+      GRANIAN_WORKERS: 4
+      GRANIAN_RUNTIME_THREADS: 2
+      GRANIAN_LOOP: uvloop
+      GRANIAN_HTTP: auto
+      GRANIAN_BACKLOG: 2048
+    ports:
+      - "127.0.0.1:8010:8000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M,mode=1777

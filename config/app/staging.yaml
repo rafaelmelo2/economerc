@@ -1,0 +1,53 @@
+postgres:
+  pool:
+    min_size: 2
+    max_size: 15
+    max_queries: 50000
+    max_inactive_connection_lifetime: 300
+    command_timeout: 30
+    timeout: 10
+
+valkey:
+  sock_path: /run/valkey/valkey.sock
+  cache_default_ttl: 300
+
+nats:
+  url: nats://nats:4222
+  name: economerc-backend-staging
+  connect_timeout: 5
+  max_reconnect_attempts: 10
+  reconnect_time_wait: 2
+
+cors:
+  allow_origins:
+    - "https://staging.economerc.app"
+  allow_credentials: true
+  allow_methods: ["*"]
+  allow_headers: ["*"]
+  expose_headers: ["X-Request-ID"]
+  max_age: 600
+
+logging:
+  service_name: economerc-backend
+  app_env: staging
+  level: INFO
+  format: json
+
+ai:
+  base_url: https://openrouter.ai/api/v1
+  tasks:
+    price_tag_ocr:
+      model: google/gemini-flash-latest
+      temperature: 0.1
+      max_tokens: 1024
+      timeout_s: 8
+    categorize_product:
+      model: google/gemini-2.5-flash-lite
+      temperature: 0.0
+      max_tokens: 256
+      timeout_s: 5
+    flyer_extract:
+      model: google/gemini-flash-latest
+      temperature: 0.1
+      max_tokens: 2048
+      timeout_s: 15

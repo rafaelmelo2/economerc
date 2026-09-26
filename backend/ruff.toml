@@ -1,0 +1,71 @@
+target-version = "py313"
+line-length = 100
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
+extend-select = [
+    "W",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "A",
+    "C4",
+    "SIM",
+    "RET",
+    "RUF",
+    "ARG",
+    "C90",
+    "PLR",
+    "T20", # flake8-print — print() proibido, ver rules/logs.md.
+]
+ignore = [
+    "C901",
+    "E501",
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "ARG001",
+]
+exclude = ["*.ipynb"]
+
+[lint.mccabe]
+max-complexity = 10
+
+[lint.pylint]
+max-args = 8
+max-returns = 6
+max-branches = 12
+max-statements = 50
+
+[lint.per-file-ignores]
+"tests/**/*.py" = [
+    "ARG001",
+    "ARG002",
+    "ARG005",
+    "PLR2004",
+    "T201",
+]
+# T20 só vale em src/** — scripts CLI (scripts/) usam print livremente.
+"!src/**/*.py" = ["T20"]
+"src/api/core/logging.py" = ["A005"]
+
+[lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Cookie",
+    "fastapi.File",
+    "fastapi.Form",
+    "fastapi.Security",
+]

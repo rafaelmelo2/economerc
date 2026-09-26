@@ -1,0 +1,192 @@
+name: economerc
+
+# Base versionada. O que muda por ambiente (portas publicadas, workers, log level)
+# fica em `config/docker/compose.{local,prod}.yaml`, escolhido pelo `.env` via
+# `COMPOSE_FILE=compose.yaml:config/docker/compose.${ENVIRONMENT}.yaml` — sem `-f`
+# na linha de comando (skill `python-config-bootstrap`).
+
+x-no-new-privs: &no-new-privs
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  postgres:
+    container_name: economerc-postgres
+    image: postgres:17-trixie
+    <<: *no-new-privs
+    environment:
+      POSTGRES_USER: economerc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    cap_drop: [ALL]
+    cap_add:
+      - CHOWN
+      - DAC_READ_SEARCH
+      - FOWNER
+      - SETGID
+      - SETUID
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U economerc"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    restart: always
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "5"
+        compress: "true"
+
+  valkey:
+    container_name: economerc-valkey
+    image: valkey/valkey:8.1.8-alpine
+    <<: *no-new-privs
+    command: >
+      valkey-server
+      --unixsocket /run/valkey/valkey.sock
+      --unixsocketperm 770
+      --port 0
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --requirepass ${VALKEY_PASSWORD}
+    volumes:
+      - valkey-data:/data
+      - valkey-sock:/run/valkey
+    networks:
+      - internal
+    # Roda como o uid/gid do próprio valkey (999:1000) — dispensa o chown de boot
+    # e a capability CHOWN/DAC_READ_SEARCH que ele exigiria.
+    user: "999:1000"
+    cap_drop: [ALL]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "valkey-cli -s /run/valkey/valkey.sock -a $$VALKEY_PASSWORD --no-auth-warning ping",
+        ]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    restart: always
+    stop_grace_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
+  nats:
+    container_name: economerc-nats
+    image: nats:2.15-alpine
+    <<: *no-new-privs
+    command: ["-js", "-sd", "/data/nats", "-m", "8222"]
+    volumes:
+      - natsdata:/data/nats
+    networks:
+      - internal
+    cap_drop: [ALL]
+    cap_add:
+      - SETGID
+      - SETUID
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    restart: always
+    stop_grace_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+        compress: "true"
+
+  migrate:
+    container_name: economerc-migrate
+    image: ghcr.io/amacneil/dbmate:2.33.0
+    <<: *no-new-privs
+    command: ["--wait", "up"]
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc?sslmode=disable
+    volumes:
+      - ./backend/db:/db:ro
+    networks:
+      - internal
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:size=16M,mode=1777
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+        compress: "true"
+
+  backend:
+    container_name: economerc-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_UID: ${APP_UID:-1000}
+    <<: *no-new-privs
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://economerc:${POSTGRES_PASSWORD}@postgres:5432/economerc?sslmode=disable
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+    volumes:
+      - ./config/app/${ENVIRONMENT}.yaml:/app/app.yaml:ro
+      - ./backend/uploads:/app/uploads
+      - valkey-sock:/run/valkey:ro
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: always
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "10"
+        compress: "true"
+
+volumes:
+  pgdata:
+  valkey-data:
+  valkey-sock:
+  natsdata:
+
+networks:
+  internal:
+    driver: bridge
