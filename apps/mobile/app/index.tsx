@@ -3,8 +3,8 @@ import { Redirect } from "expo-router";
 import { useSessionStore } from "@/lib/store/session-store";
 
 /**
- * Guard de entrada — síncrono, sem backend (onda 1). Onda 3 troca por sessão real
- * (access em memória + refresh em `expo-secure-store`).
+ * Guard de entrada — lê o `session-store` já hidratado pelo bootstrap de
+ * `app/_layout.tsx` (o `Stack` só monta depois que a sessão foi decidida).
  */
 export default function Index() {
   const isAuthenticated = useSessionStore((state) => state.isAuthenticated);

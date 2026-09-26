@@ -1,11 +1,12 @@
 import { router } from "expo-router";
+import { useState } from "react";
 import { Platform, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-import { useSessionStore, type AuthProvider } from "@/lib/store/session-store";
+import { useSessionStore } from "@/lib/store/session-store";
 
 /**
  * Símbolo da marca (`docs/brand/logo/simbolo.svg`) — etiqueta de gôndola com o furo em amarelo.
@@ -35,12 +36,25 @@ function BrandSymbol({ size = 56 }: { size?: number }) {
 }
 
 export default function WelcomeScreen() {
-  const signIn = useSessionStore((state) => state.signIn);
+  const signInWithGoogle = useSessionStore((state) => state.signInWithGoogle);
+  const signInWithApple = useSessionStore((state) => state.signInWithApple);
+  const signInDev = useSessionStore((state) => state.signInDev);
+  const [busyProvider, setBusyProvider] = useState<"google" | "apple" | "dev" | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // TODO onda 3: login real — trocar id_token do provedor no backend via JWKS (skill `auth`).
-  function signInMock(provider: AuthProvider) {
-    signIn(provider);
-    router.replace("/(onboarding)/city");
+  async function handleSignIn(provider: "google" | "apple" | "dev") {
+    setErrorMessage(null);
+    setBusyProvider(provider);
+    try {
+      if (provider === "google") await signInWithGoogle();
+      else if (provider === "apple") await signInWithApple();
+      else await signInDev();
+      router.replace("/");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Não foi possível entrar. Tente de novo.");
+    } finally {
+      setBusyProvider(null);
+    }
   }
 
   return (
@@ -60,12 +74,38 @@ export default function WelcomeScreen() {
         </View>
 
         <View className="gap-3">
-          <Button variant="primary" size="lg" onPress={() => signInMock("google")}>
-            Entrar com Google
+          {errorMessage ? (
+            <Text variant="footnote" color="danger" className="text-center">
+              {errorMessage}
+            </Text>
+          ) : null}
+
+          <Button
+            variant="primary"
+            size="lg"
+            disabled={busyProvider !== null}
+            onPress={() => void handleSignIn("google")}
+          >
+            {busyProvider === "google" ? "Entrando…" : "Entrar com Google"}
           </Button>
           {Platform.OS === "ios" ? (
-            <Button variant="outline" size="lg" onPress={() => signInMock("apple")}>
-              Entrar com Apple
+            <Button
+              variant="outline"
+              size="lg"
+              disabled={busyProvider !== null}
+              onPress={() => void handleSignIn("apple")}
+            >
+              {busyProvider === "apple" ? "Entrando…" : "Entrar com Apple"}
+            </Button>
+          ) : null}
+          {__DEV__ ? (
+            <Button
+              variant="ghost"
+              size="lg"
+              disabled={busyProvider !== null}
+              onPress={() => void handleSignIn("dev")}
+            >
+              {busyProvider === "dev" ? "Entrando…" : "Entrar (dev)"}
             </Button>
           ) : null}
           <Text variant="caption" color="muted" className="pt-2 text-center">
