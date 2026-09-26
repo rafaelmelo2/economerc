@@ -12,6 +12,10 @@ UNIQUE_CONSTRAINT_MESSAGES: dict[str, str] = {
     "products_ean_uq": "Já existe um produto com este EAN.",
     "markets_cnpj_uq": "Já existe um mercado com este CNPJ.",
     "cities_ibge_code_key": "Já existe uma cidade com este código IBGE.",
+    "uq_product_aliases_market_id_market_code": (
+        "Este código já está associado a outro item neste mercado."
+    ),
+    "ux_prices_reported_by_client_id": "Este preço já foi registrado.",
 }
 
 
@@ -67,6 +71,14 @@ class ForbiddenError(BaseAPIExceptionError):
     TITLE = "Sem permissão"
     STATUS = status.HTTP_403_FORBIDDEN
     DETAIL = "Você não tem permissão para esta ação."
+
+
+class BadGatewayError(BaseAPIExceptionError):
+    """Falha ao consultar um serviço externo (ex.: Open Food Facts)."""
+
+    TITLE = "Serviço externo indisponível"
+    STATUS = status.HTTP_502_BAD_GATEWAY
+    DETAIL = "Não foi possível consultar o serviço externo agora. Tente novamente."
 
 
 async def api_exception_handler(
