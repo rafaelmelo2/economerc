@@ -78,6 +78,49 @@ class CorsSettings(BaseModel):
     max_age: int
 
 
+class CookiesSettings(BaseModel):
+    """Cookie de refresh para o cliente web (flag `X-Client: web`, skill `auth`).
+
+    App nativo NUNCA usa cookie — refresh volta no corpo JSON (SecureStore).
+    """
+
+    secure: bool
+
+
+class RefreshTokenSettings(BaseModel):
+    """Contrato de `refresh_tokens` (skill `auth` > auth-hardened.md §13)."""
+
+    ttl_days: int
+    absolute_lifetime_days: int
+    reuse_grace_seconds: int
+    gc_retention_seconds: int
+
+
+class GoogleAuthSettings(BaseModel):
+    """Client IDs por plataforma — todos válidos como `aud` do id_token nativo."""
+
+    client_id_ios: str
+    client_id_android: str
+    client_id_web: str
+    jwks_url: str = "https://www.googleapis.com/oauth2/v3/certs"
+    jwks_cache_ttl_seconds: int = 3600
+
+
+class AppleAuthSettings(BaseModel):
+    """Bundle ID (app) + Service ID (web, se houver) — `aud` do identity_token."""
+
+    bundle_id: str
+    service_id: str = ""
+    jwks_url: str = "https://appleid.apple.com/auth/keys"
+    jwks_cache_ttl_seconds: int = 3600
+
+
+class AuthSettings(BaseModel):
+    refresh_token: RefreshTokenSettings
+    google: GoogleAuthSettings
+    apple: AppleAuthSettings
+
+
 class LoggingSettings(BaseModel):
     service_name: str
     app_env: str
@@ -112,6 +155,8 @@ class Settings(BaseModel):
     valkey: ValkeySettings
     nats: NatsSettings
     cors: CorsSettings
+    cookies: CookiesSettings
+    auth: AuthSettings
     logging: LoggingSettings
     ai: AiSettings
 

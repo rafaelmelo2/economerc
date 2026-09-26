@@ -29,6 +29,30 @@ cors:
   expose_headers: ["X-Request-ID"]
   max_age: 600
 
+cookies:
+  secure: false
+
+auth:
+  refresh_token:
+    ttl_days: 30
+    absolute_lifetime_days: 60
+    # 0 no teste: torna a janela de graça (auth-hardened.md §3a) determinística
+    # — reuso do token antigo derruba a família de imediato, sem depender do
+    # relógio da máquina de CI ficar dentro/fora de uma janela de segundos.
+    reuse_grace_seconds: 0
+    gc_retention_seconds: 3600
+  google:
+    client_id_ios: "test-google-ios-client-id"
+    client_id_android: "test-google-android-client-id"
+    client_id_web: "test-google-web-client-id"
+    jwks_url: https://www.googleapis.com/oauth2/v3/certs
+    jwks_cache_ttl_seconds: 3600
+  apple:
+    bundle_id: "com.economerc.app.test"
+    service_id: "com.economerc.app.test.web"
+    jwks_url: https://appleid.apple.com/auth/keys
+    jwks_cache_ttl_seconds: 3600
+
 logging:
   service_name: economerc-backend-test
   app_env: test
