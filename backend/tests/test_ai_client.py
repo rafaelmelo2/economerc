@@ -65,9 +65,9 @@ async def test_complete_returns_content_and_usage(monkeypatch: pytest.MonkeyPatc
     assert result.prompt_tokens == 42
     assert result.completion_tokens == 3
     assert result.cost_usd > 0
-    assert result.model == "google/gemini-2.5-flash-lite"
+    assert result.model == "google/gemini-3.1-flash-lite"
     assert fake_session.last_call["url"].endswith("/chat/completions")
-    assert fake_session.last_call["json"]["model"] == "google/gemini-2.5-flash-lite"
+    assert fake_session.last_call["json"]["model"] == "google/gemini-3.1-flash-lite"
 
 
 async def test_complete_sends_image_when_provided(monkeypatch: pytest.MonkeyPatch):

@@ -82,9 +82,9 @@ ai:
   # Provider único: OpenRouter (OPENROUTER_API_KEY). Gemini, Claude etc. entram pelo slug do modelo.
   base_url: https://openrouter.ai/api/v1
   tasks:
-    price_tag_ocr:      { model: google/gemini-2.5-flash, timeout_s: 8 }
-    categorize_product: { model: google/gemini-2.5-flash-lite, timeout_s: 5 }
-    flyer_extract:      { model: google/gemini-2.5-flash, timeout_s: 20 }
+    price_tag_ocr:      { model: google/gemini-3.8-flash, timeout_s: 8 }
+    categorize_product: { model: google/gemini-3.1-flash-lite, timeout_s: 5 }
+    flyer_extract:      { model: google/gemini-3.8-flash, timeout_s: 20 }
 ```
 
 - Cliente único para o OpenRouter (API OpenAI-compatível), modelo escolhido por tarefa. Trocar de modelo
