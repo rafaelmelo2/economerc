@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from api.routes.account import router as account_router
 from api.routes.catalog.category import router as category_router
 from api.routes.geo.city import router as city_router
 from api.routes.health import router as health_router
@@ -9,3 +10,4 @@ api_router = APIRouter(prefix=api_config.API_PREFIX)
 api_router.include_router(health_router)
 api_router.include_router(city_router)
 api_router.include_router(category_router)
+api_router.include_router(account_router)

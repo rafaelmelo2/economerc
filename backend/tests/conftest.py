@@ -38,16 +38,20 @@ dotenv.load_dotenv(_REPO_ROOT / ".env", override=False)
 os.environ.setdefault("APP_YAML_PATH", str(_TESTS_DIR / "app.test.yaml"))
 
 # Porta publicada do Postgres local (docs/fases-construcao.md). `dbmate up` cria
-# o banco `economerc_test` sozinho — o usuário `economerc` do container tem
-# CREATEDB (default do POSTGRES_USER da imagem oficial).
+# o banco sozinho — o usuário `economerc` do container tem CREATEDB (default do
+# POSTGRES_USER da imagem oficial). Cada worktree/agente da Onda 2 roda contra
+# o PRÓPRIO banco (`economerc_test_2a`/`_2b`/`_2c`, nunca `economerc_test`
+# compartilhado) — por isso um `TEST_DATABASE_URL` já setado no ambiente
+# (docs/fases-construcao.md > regras críticas) vence o default abaixo.
 _TEST_DB_PORT = os.environ.get("ECONOMERC_TEST_DB_PORT", "5442")
 _TEST_DB_PASSWORD = os.environ["POSTGRES_PASSWORD"]
-TEST_DATABASE_URL = (
+_DEFAULT_TEST_DATABASE_URL = (
     f"postgres://economerc:{_TEST_DB_PASSWORD}@localhost:{_TEST_DB_PORT}"
     "/economerc_test?sslmode=disable"
 )
-os.environ.setdefault("TEST_DATABASE_URL", TEST_DATABASE_URL)
-os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
+os.environ.setdefault("TEST_DATABASE_URL", _DEFAULT_TEST_DATABASE_URL)
+os.environ.setdefault("DATABASE_URL", os.environ["TEST_DATABASE_URL"])
+TEST_DATABASE_URL = os.environ["TEST_DATABASE_URL"]
 
 import asyncpg
 import pytest

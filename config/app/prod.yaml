@@ -27,6 +27,27 @@ cors:
   expose_headers: ["X-Request-ID"]
   max_age: 600
 
+cookies:
+  secure: true
+
+auth:
+  refresh_token:
+    ttl_days: 30
+    absolute_lifetime_days: 60
+    reuse_grace_seconds: 20
+    gc_retention_seconds: 3600
+  google:
+    client_id_ios: "REPLACE_WITH_GOOGLE_IOS_CLIENT_ID.apps.googleusercontent.com"
+    client_id_android: "REPLACE_WITH_GOOGLE_ANDROID_CLIENT_ID.apps.googleusercontent.com"
+    client_id_web: "REPLACE_WITH_GOOGLE_WEB_CLIENT_ID.apps.googleusercontent.com"
+    jwks_url: https://www.googleapis.com/oauth2/v3/certs
+    jwks_cache_ttl_seconds: 3600
+  apple:
+    bundle_id: "com.economerc.app"
+    service_id: "com.economerc.app.web"
+    jwks_url: https://appleid.apple.com/auth/keys
+    jwks_cache_ttl_seconds: 3600
+
 logging:
   service_name: economerc-backend
   app_env: prod
