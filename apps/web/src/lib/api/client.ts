@@ -33,7 +33,9 @@ async function handleTokenRefresh(): Promise<boolean> {
 
 const rawClient = createApiClient(
   typeof window !== "undefined" ? window.location.origin : "http://localhost",
-  getAccessToken,
+  // O retry de 401 é o `withRetry` abaixo (lock da web); não usar `onUnauthorized` aqui
+  // para não renovar duas vezes.
+  { getToken: getAccessToken },
 );
 
 async function withRetry<T>(
