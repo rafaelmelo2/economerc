@@ -1,6 +1,10 @@
 import * as React from "react"
 import { cn } from "cn"
 
+/** Trigger de campo de FK (`EntityPicker`) — herda a métrica de `Input`, não a de `Button`
+ * (`.claude/rules/web.md` > FK em forms). */
+export const FIELD_TRIGGER_CLASS = "h-9 w-full text-base shadow-xs md:text-sm"
+
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input

@@ -51,6 +51,9 @@ auth:
     service_id: "com.economerc.app.web"
     jwks_url: https://appleid.apple.com/auth/keys
     jwks_cache_ttl_seconds: 3600
+  # E-mails que entram como admin no primeiro login Google/Apple (bloco 5B).
+  admin_emails:
+    - "rafinhalelograma@hotmail.com"
 
 logging:
   service_name: economerc-backend

@@ -10,11 +10,25 @@ from uuid import UUID
 from asyncpg import Connection
 
 from api.repositories.shared.listing import ListPage, ListParams, sentinel
+from api.repositories.shared.sorting import SortMap, by_column, order_by
 
 _LIST_FILTER: Final = """
     FROM receipts
     WHERE user_id = $1
 """
+
+# FROM + WHERE compartilhados entre a página e o COUNT de `GET /admin/receipts`. $1 = status
+# (nullable = todos) — o admin usa `status=failed` pra fila de reprocessamento.
+_ADMIN_LIST_FILTER: Final = """
+    FROM receipts r
+    JOIN users u ON u.id = r.user_id
+    LEFT JOIN markets m ON m.id = r.market_id
+    WHERE ($1::text IS NULL OR r.status = $1)
+"""
+
+_ADMIN_SORTS: SortMap = {
+    "created_at": by_column("created_at", alias="r", default_order="desc"),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,6 +183,26 @@ class ReceiptRepository:
             reason[:200],
         )
         return dict(row) if row else None
+
+    async def list_for_admin(
+        self, conn: Connection, params: ListParams, *, status: str | None
+    ) -> ListPage:
+        order = order_by(_ADMIN_SORTS, params.sort, params.order, default="created_at")
+        rows = await conn.fetch(
+            f"""
+            SELECT r.*, u.email AS user_email, m.trade_name AS market_name
+              {_ADMIN_LIST_FILTER}
+             ORDER BY {order}
+             LIMIT $2 OFFSET $3
+            """,
+            status,
+            params.fetch_limit,
+            params.skip,
+        )
+        total = None
+        if params.wants_total:
+            total = await conn.fetchval(f"SELECT COUNT(*) {_ADMIN_LIST_FILTER}", status)
+        return sentinel(rows, params, total)
 
     async def mark_duplicate(self, conn: Connection, receipt: NewReceipt, canonical: dict) -> dict:
         """Nota já processada por outra pessoa — histórico próprio, sem reprocessar."""

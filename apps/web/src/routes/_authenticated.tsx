@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/auth";
 // (ver .claude/rules/web.md > TanStack Router).
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: () => {
-    if (!useAuthStore.getState().accessToken) {
+    if (useAuthStore.getState().status !== "authenticated") {
       throw redirect({ to: "/entrar" });
     }
   },

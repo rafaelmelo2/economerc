@@ -29,3 +29,9 @@ export function formatDecimalBRL(value: number): string {
 export function formatMoneyPerUnit(value: number, unit: PriceUnit): string {
   return `${formatMoneyBRL(value)}/${unit}`;
 }
+
+/** A API devolve dinheiro como string decimal (nunca float, ver `.claude/rules/backend.md`).
+ * Este parser é só para EXIBIÇÃO — nenhuma conta acontece com o resultado. */
+export function formatMoneyFromApi(value: string): string {
+  return formatMoneyBRL(Number(value));
+}

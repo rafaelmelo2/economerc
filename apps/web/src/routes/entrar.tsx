@@ -1,36 +1,60 @@
+import { GoogleLogin } from "@react-oauth/google";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { FaApple } from "react-icons/fa6";
-import { FcGoogle } from "react-icons/fc";
 
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { loginWithDevBackdoor } from "@/lib/api/auth";
 import { useAuthStore } from "@/stores/auth";
 
 export const Route = createFileRoute("/entrar")({
   beforeLoad: () => {
-    if (useAuthStore.getState().accessToken) {
+    if (useAuthStore.getState().status === "authenticated") {
       throw redirect({ to: "/historico" });
     }
   },
   component: LoginPage,
 });
 
-// Sessão mock — sem integração OAuth ainda. TODO onda 5: auth real (Google + Apple via JWKS,
-// access token em memória, refresh em cookie HttpOnly — ver skill `auth`).
-function createMockSession() {
-  useAuthStore.getState().setSession({
-    accessToken: "mock-access-token",
-    user: { name: "Ana Compradora", email: "ana@exemplo.com.br" },
-  });
+/** Botão "Entrar (dev)" só existe quando a rota realmente existe no backend (outro agente pode
+ * ainda não ter subido `POST /api/auth/dev-login`) — checagem única, cacheada no módulo. */
+function useDevLoginAvailable(): boolean {
+  const [available, setAvailable] = useState(false);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    let cancelled = false;
+    fetch("/api/openapi.json")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((spec: { paths?: Record<string, unknown> } | null) => {
+        if (!cancelled && spec?.paths && "/api/auth/dev-login" in spec.paths) {
+          setAvailable(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return available;
 }
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { loginWithGoogle, loginError, isLoggingIn } = useAuth();
+  const devLoginAvailable = useDevLoginAvailable();
 
-  const handleMockLogin = () => {
-    // TODO onda 5: auth real — troca o popup/token real pelo backend, nunca aceitar
-    // id_token do front sem reverificar (ver skill auth).
-    createMockSession();
+  const handleGoogleSuccess = async (credential: string) => {
+    await loginWithGoogle(credential);
     navigate({ to: "/historico" });
+  };
+
+  const handleDevLogin = async () => {
+    const session = await loginWithDevBackdoor("rafinhalelograma@hotmail.com");
+    if (session) {
+      useAuthStore.getState().setSession(session);
+      navigate({ to: "/historico" });
+    }
   };
 
   return (
@@ -47,17 +71,34 @@ function LoginPage() {
         </div>
 
         <div className="flex flex-col gap-3 rounded-2xl border bg-card p-6 shadow-sm">
-          <Button type="button" variant="outline" size="lg" onClick={handleMockLogin}>
-            <FcGoogle />
-            Continuar com Google
-          </Button>
-          <Button type="button" variant="outline" size="lg" onClick={handleMockLogin}>
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={(credentialResponse) => {
+                if (credentialResponse.credential) {
+                  void handleGoogleSuccess(credentialResponse.credential);
+                }
+              }}
+              text="continue_with"
+              width={280}
+            />
+          </div>
+          <Button type="button" variant="outline" size="lg" disabled>
             <FaApple />
             Continuar com Apple
           </Button>
-          <p className="mt-1 text-center text-xs text-muted-foreground">
-            Sem e-mail e senha por enquanto — só Google ou Apple.
-          </p>
+          {isLoggingIn && (
+            <p className="text-center text-xs text-muted-foreground">Entrando…</p>
+          )}
+          {loginError && (
+            <p className="text-center text-xs text-destructive">
+              Não foi possível entrar. Tente novamente.
+            </p>
+          )}
+          {devLoginAvailable && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => void handleDevLogin()}>
+              Entrar (dev)
+            </Button>
+          )}
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
