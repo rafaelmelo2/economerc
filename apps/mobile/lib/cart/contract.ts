@@ -1,16 +1,34 @@
 // Contrato do carrinho entre os blocos da onda 3 (docs/fases-construcao.md).
 //
 // - 3B (scan + carrinho) CONSOME só o que está exportado aqui: tipos + hooks/ações.
-// - 3A (dados + sync) SUBSTITUI a implementação em memória abaixo por SQLite + outbox,
-//   mantendo exatamente os mesmos nomes e assinaturas. Nenhum dos dois muda este
-//   contrato sem combinar — mudança de assinatura quebra o outro bloco no merge.
+// - 3A (dados + sync) implementa sobre expo-sqlite + outbox — mesmos nomes e
+//   assinaturas do contrato original (useActiveCart, addCartItem,
+//   updateCartItem, removeCartItem, setCartMarket, setCartBudget,
+//   closeActiveCart). Nenhum dos dois muda este contrato sem combinar.
 //
 // Dinheiro sempre em centavos inteiros; quantidade em milésimos (1 un = 1000,
-// 1,4 kg = 1400) para nunca somar float.
+// 1,4 kg = 1400) para nunca somar float. Conversão pra string decimal só na
+// borda do sync (lib/sync/money.ts) — o resto do app nunca vê float/decimal.
 
+import type { JsonValue } from "@economerc/shared";
 import { create } from "zustand";
 
 import type { CategoryKey } from "@/lib/types";
+import {
+  findCartItemByClientId,
+  findOpenCart,
+  insertCart,
+  insertCartItem,
+  listActiveCartItems,
+  updateCart as updateCartRow,
+  updateCartItem as updateCartItemRow,
+} from "@/lib/db/cart-repository";
+import { getDb } from "@/lib/db/client";
+import { bumpFieldVersions, parseFieldVersions, stringifyFieldVersions } from "@/lib/db/field-versions";
+import { enqueueOutboxMutation } from "@/lib/db/outbox-repository";
+import type { CartItemRow, CartRow } from "@/lib/db/types";
+import { centsToDecimalString, milliToDecimalString } from "@/lib/sync/money";
+import { scheduleSyncSoon } from "@/lib/sync/engine";
 
 export type ProductUnit = "un" | "kg" | "g" | "l" | "ml";
 
@@ -52,80 +70,304 @@ export function computeItemTotalCents(unitPriceCents: number, quantityMilli: num
 }
 
 // ---------------------------------------------------------------------------
-// Implementação em memória (provisória). O bloco 3A troca TUDO daqui pra baixo
-// por SQLite + outbox, preservando: useActiveCart, addCartItem, updateCartItem,
-// removeCartItem, setCartMarket, setCartBudget, closeActiveCart.
+// Implementação sobre SQLite + outbox. A UI lê do SQLite via um store zustand
+// alimentado por `refreshCartStore()` a cada mutação — nunca escreve direto,
+// sempre pelas funções abaixo (entidade + outbox na MESMA transação SQLite).
 // ---------------------------------------------------------------------------
-
-interface CartMemoryState {
-  cart: ActiveCart;
-}
 
 function newClientId(): string {
   return globalThis.crypto.randomUUID();
 }
 
-function emptyCart(): ActiveCart {
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+function rowToItemRecord(row: CartItemRow): CartItemRecord {
   return {
-    clientId: newClientId(),
-    marketId: null,
-    marketName: null,
-    budgetCents: null,
-    items: [],
-    totalCents: 0,
+    ean: row.ean,
+    productName: row.product_name,
+    category: row.category as CategoryKey,
+    unit: row.unit,
+    unitPriceCents: row.unit_price_cents,
+    quantityMilli: row.quantity_milli,
+    isOffer: row.is_offer === 1,
+    productId: row.product_id,
+    clientId: row.client_id,
+    totalCents: row.total_cents,
+    addedAt: row.added_at,
   };
 }
 
-function withTotals(cart: ActiveCart, items: readonly CartItemRecord[]): ActiveCart {
-  const totalCents = items.reduce((sum, item) => sum + item.totalCents, 0);
-  return { ...cart, items, totalCents };
+/** Garante que existe um carrinho aberto local — cria (+ outbox) na 1ª leitura
+ * do app ou logo depois de `closeActiveCart`. */
+function ensureOpenCartRow(): CartRow {
+  const db = getDb();
+  const existing = findOpenCart(db);
+  if (existing) return existing;
+
+  const startedAt = nowIso();
+  const clientId = newClientId();
+  const fieldVersions = bumpFieldVersions({}, ["status", "startedAt"], startedAt);
+  const row: CartRow = {
+    client_id: clientId,
+    market_id: null,
+    market_name: null,
+    status: "open",
+    budget_cents: null,
+    started_at: startedAt,
+    closed_at: null,
+    updated_at: startedAt,
+    field_versions: stringifyFieldVersions(fieldVersions),
+    deleted_at: null,
+  };
+  db.withTransactionSync(() => {
+    insertCart(db, row);
+    enqueueOutboxMutation(db, {
+      entity: "cart",
+      op: "upsert",
+      clientId,
+      fields: { status: "open", startedAt },
+      updatedAt: startedAt,
+    });
+  });
+  return row;
 }
 
-const useCartMemoryStore = create<CartMemoryState>(() => ({ cart: emptyCart() }));
+function loadActiveCartFromDb(): ActiveCart {
+  const cartRow = ensureOpenCartRow();
+  const items = listActiveCartItems(getDb(), cartRow.client_id).map(rowToItemRecord);
+  const totalCents = items.reduce((sum, item) => sum + item.totalCents, 0);
+  return {
+    clientId: cartRow.client_id,
+    marketId: cartRow.market_id,
+    marketName: cartRow.market_name,
+    budgetCents: cartRow.budget_cents,
+    items,
+    totalCents,
+  };
+}
+
+const useCartStore = create<{ cart: ActiveCart }>(() => ({ cart: loadActiveCartFromDb() }));
+
+function refreshCartStore(): void {
+  useCartStore.setState({ cart: loadActiveCartFromDb() });
+}
 
 export function useActiveCart(): ActiveCart {
-  return useCartMemoryStore((state) => state.cart);
+  return useCartStore((state) => state.cart);
 }
 
 export async function addCartItem(input: NewCartItemInput): Promise<CartItemRecord> {
-  const record: CartItemRecord = {
-    ...input,
-    clientId: newClientId(),
-    totalCents: computeItemTotalCents(input.unitPriceCents, input.quantityMilli),
-    addedAt: new Date().toISOString(),
+  const db = getDb();
+  const cartRow = ensureOpenCartRow();
+  const addedAt = nowIso();
+  const clientId = newClientId();
+  const totalCents = computeItemTotalCents(input.unitPriceCents, input.quantityMilli);
+
+  const outboxFields: Record<string, JsonValue> = {
+    cartClientId: cartRow.client_id,
+    productId: input.productId,
+    ean: input.ean,
+    productName: input.productName,
+    unitPrice: centsToDecimalString(input.unitPriceCents),
+    quantity: milliToDecimalString(input.quantityMilli),
+    unit: input.unit,
+    isOffer: input.isOffer,
   };
-  const { cart } = useCartMemoryStore.getState();
-  useCartMemoryStore.setState({ cart: withTotals(cart, [record, ...cart.items]) });
-  return record;
+  const fieldVersions = bumpFieldVersions({}, Object.keys(outboxFields), addedAt);
+
+  const row: CartItemRow = {
+    client_id: clientId,
+    cart_client_id: cartRow.client_id,
+    product_id: input.productId,
+    ean: input.ean,
+    product_name: input.productName,
+    category: input.category,
+    unit: input.unit,
+    unit_price_cents: input.unitPriceCents,
+    quantity_milli: input.quantityMilli,
+    is_offer: input.isOffer ? 1 : 0,
+    total_cents: totalCents,
+    added_at: addedAt,
+    updated_at: addedAt,
+    field_versions: stringifyFieldVersions(fieldVersions),
+    deleted_at: null,
+  };
+
+  db.withTransactionSync(() => {
+    insertCartItem(db, row);
+    enqueueOutboxMutation(db, {
+      entity: "cart_item",
+      op: "upsert",
+      clientId,
+      fields: outboxFields,
+      updatedAt: addedAt,
+    });
+  });
+
+  refreshCartStore();
+  scheduleSyncSoon();
+  return rowToItemRecord(row);
 }
 
 export async function updateCartItem(clientId: string, patch: CartItemPatch): Promise<void> {
-  const { cart } = useCartMemoryStore.getState();
-  const items = cart.items.map((item) => {
-    if (item.clientId !== clientId) return item;
-    const next = { ...item, ...patch };
-    return { ...next, totalCents: computeItemTotalCents(next.unitPriceCents, next.quantityMilli) };
+  const db = getDb();
+  const existing = findCartItemByClientId(db, clientId);
+  if (!existing || existing.deleted_at !== null) return;
+
+  const now = nowIso();
+  const nextUnitPriceCents = patch.unitPriceCents ?? existing.unit_price_cents;
+  const nextQuantityMilli = patch.quantityMilli ?? existing.quantity_milli;
+  const totalCents = computeItemTotalCents(nextUnitPriceCents, nextQuantityMilli);
+
+  const outboxFields: Record<string, JsonValue> = {};
+  const columnPatch: Partial<Omit<CartItemRow, "client_id">> = {
+    total_cents: totalCents,
+    updated_at: now,
+  };
+  if (patch.unitPriceCents !== undefined) {
+    columnPatch.unit_price_cents = patch.unitPriceCents;
+    outboxFields.unitPrice = centsToDecimalString(patch.unitPriceCents);
+  }
+  if (patch.quantityMilli !== undefined) {
+    columnPatch.quantity_milli = patch.quantityMilli;
+    outboxFields.quantity = milliToDecimalString(patch.quantityMilli);
+  }
+  if (patch.isOffer !== undefined) {
+    columnPatch.is_offer = patch.isOffer ? 1 : 0;
+    outboxFields.isOffer = patch.isOffer;
+  }
+  if (Object.keys(outboxFields).length === 0) return;
+
+  const fieldVersions = bumpFieldVersions(
+    parseFieldVersions(existing.field_versions),
+    Object.keys(outboxFields),
+    now,
+  );
+  columnPatch.field_versions = stringifyFieldVersions(fieldVersions);
+
+  db.withTransactionSync(() => {
+    updateCartItemRow(db, clientId, columnPatch);
+    enqueueOutboxMutation(db, {
+      entity: "cart_item",
+      op: "upsert",
+      clientId,
+      fields: outboxFields,
+      updatedAt: now,
+    });
   });
-  useCartMemoryStore.setState({ cart: withTotals(cart, items) });
+
+  refreshCartStore();
+  scheduleSyncSoon();
 }
 
 export async function removeCartItem(clientId: string): Promise<void> {
-  const { cart } = useCartMemoryStore.getState();
-  const items = cart.items.filter((item) => item.clientId !== clientId);
-  useCartMemoryStore.setState({ cart: withTotals(cart, items) });
+  const db = getDb();
+  const existing = findCartItemByClientId(db, clientId);
+  if (!existing || existing.deleted_at !== null) return;
+  const now = nowIso();
+
+  db.withTransactionSync(() => {
+    updateCartItemRow(db, clientId, { deleted_at: now, updated_at: now });
+    enqueueOutboxMutation(db, { entity: "cart_item", op: "delete", clientId, fields: {}, updatedAt: now });
+  });
+
+  refreshCartStore();
+  scheduleSyncSoon();
 }
 
-export async function setCartMarket(marketId: string | null, marketName: string | null) {
-  const { cart } = useCartMemoryStore.getState();
-  useCartMemoryStore.setState({ cart: { ...cart, marketId, marketName } });
+export async function setCartMarket(marketId: string | null, marketName: string | null): Promise<void> {
+  const db = getDb();
+  const cartRow = ensureOpenCartRow();
+  const now = nowIso();
+
+  db.withTransactionSync(() => {
+    if (marketId === null) {
+      // `market_name` é local-only (nunca vai pro outbox); limpar o mercado
+      // não tem representação no contrato de sync (backend `exclude_none`
+      // descarta campo nulo), então só atualiza o lado local.
+      updateCartRow(db, cartRow.client_id, { market_id: null, market_name: marketName, updated_at: now });
+      return;
+    }
+    const fieldVersions = bumpFieldVersions(parseFieldVersions(cartRow.field_versions), ["marketId"], now);
+    updateCartRow(db, cartRow.client_id, {
+      market_id: marketId,
+      market_name: marketName,
+      updated_at: now,
+      field_versions: stringifyFieldVersions(fieldVersions),
+    });
+    enqueueOutboxMutation(db, {
+      entity: "cart",
+      op: "upsert",
+      clientId: cartRow.client_id,
+      fields: { marketId },
+      updatedAt: now,
+    });
+  });
+
+  refreshCartStore();
+  scheduleSyncSoon();
 }
 
 export async function setCartBudget(budgetCents: number | null): Promise<void> {
-  const { cart } = useCartMemoryStore.getState();
-  useCartMemoryStore.setState({ cart: { ...cart, budgetCents } });
+  const db = getDb();
+  const cartRow = ensureOpenCartRow();
+  const now = nowIso();
+
+  db.withTransactionSync(() => {
+    if (budgetCents === null) {
+      updateCartRow(db, cartRow.client_id, { budget_cents: null, updated_at: now });
+      return;
+    }
+    const fieldVersions = bumpFieldVersions(parseFieldVersions(cartRow.field_versions), ["budget"], now);
+    updateCartRow(db, cartRow.client_id, {
+      budget_cents: budgetCents,
+      updated_at: now,
+      field_versions: stringifyFieldVersions(fieldVersions),
+    });
+    enqueueOutboxMutation(db, {
+      entity: "cart",
+      op: "upsert",
+      clientId: cartRow.client_id,
+      fields: { budget: centsToDecimalString(budgetCents) },
+      updatedAt: now,
+    });
+  });
+
+  refreshCartStore();
+  scheduleSyncSoon();
 }
 
 /** Fecha a compra atual (vai pro histórico) e abre um carrinho vazio. */
 export async function closeActiveCart(): Promise<void> {
-  useCartMemoryStore.setState({ cart: emptyCart() });
+  const db = getDb();
+  const cartRow = ensureOpenCartRow();
+  const now = nowIso();
+  const fieldVersions = bumpFieldVersions(
+    parseFieldVersions(cartRow.field_versions),
+    ["status", "closedAt"],
+    now,
+  );
+
+  db.withTransactionSync(() => {
+    updateCartRow(db, cartRow.client_id, {
+      status: "closed",
+      closed_at: now,
+      updated_at: now,
+      field_versions: stringifyFieldVersions(fieldVersions),
+    });
+    enqueueOutboxMutation(db, {
+      entity: "cart",
+      op: "upsert",
+      clientId: cartRow.client_id,
+      fields: { status: "closed", closedAt: now },
+      updatedAt: now,
+    });
+  });
+
+  ensureOpenCartRow(); // abre o próximo carrinho (insert + outbox) na mesma passada
+
+  refreshCartStore();
+  scheduleSyncSoon();
 }

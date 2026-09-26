@@ -11,6 +11,7 @@ const config: ExpoConfig = {
   ios: {
     bundleIdentifier: "br.com.economerc.app",
     supportsTablet: false,
+    usesAppleSignIn: true,
   },
   android: {
     package: "br.com.economerc.app",
@@ -27,6 +28,14 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     "expo-secure-store",
+    "expo-sqlite",
+    "expo-apple-authentication",
+    // Sem opções: client IDs em runtime via `EXPO_PUBLIC_GOOGLE_*_CLIENT_ID`
+    // (google-signin.ts) — web já provisionado, iOS/Android ainda placeholders
+    // (Android precisa do SHA-1 do build EAS). O dono adiciona
+    // `GoogleService-Info.plist`/`google-services.json` quando existirem
+    // (docs/fases-construcao.md > Depende de você).
+    "@react-native-google-signin/google-signin",
     [
       "expo-splash-screen",
       {

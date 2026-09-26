@@ -34,12 +34,6 @@ export interface BudgetStatus {
   percentage: number;
 }
 
-export interface CityOption {
-  slug: string;
-  name: string;
-  state: string;
-}
-
 export interface CategorySpend {
   category: CategoryKey;
   label: string;

@@ -16,10 +16,12 @@ const MIN_BUDGET_CENTS = 5000;
 export default function OnboardingBudgetScreen() {
   const monthlyBudgetCents = useOnboardingDraftStore((state) => state.monthlyBudgetCents);
   const setMonthlyBudgetCents = useOnboardingDraftStore((state) => state.setMonthlyBudgetCents);
-  const citySlug = useOnboardingDraftStore((state) => state.citySlug);
+  const cityId = useOnboardingDraftStore((state) => state.cityId);
+  const cityLabel = useOnboardingDraftStore((state) => state.cityLabel);
   const familySize = useOnboardingDraftStore((state) => state.familySize);
   const resetDraft = useOnboardingDraftStore((state) => state.reset);
   const completeOnboarding = useSessionStore((state) => state.completeOnboarding);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [rawInput, setRawInput] = useState(formatCentsAsBRLInput(monthlyBudgetCents));
   const isValid = monthlyBudgetCents >= MIN_BUDGET_CENTS;
@@ -30,10 +32,15 @@ export default function OnboardingBudgetScreen() {
     setRawInput(formatCentsAsBRLInput(cents));
   }
 
-  function finish() {
-    completeOnboarding({ citySlug, familySize, monthlyBudgetCents });
-    resetDraft();
-    router.replace("/(tabs)");
+  async function finish() {
+    setIsSaving(true);
+    try {
+      await completeOnboarding({ cityId, cityLabel, familySize, monthlyBudgetCents });
+      resetDraft();
+      router.replace("/(tabs)");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -60,7 +67,13 @@ export default function OnboardingBudgetScreen() {
 
         <View className="flex-1" />
 
-        <Button size="lg" className="mb-4" disabled={!isValid} onPress={finish}>
+        <Button
+          size="lg"
+          className="mb-4"
+          disabled={!isValid || isSaving}
+          loading={isSaving}
+          onPress={() => void finish()}
+        >
           Começar a usar o EconoMerc
         </Button>
       </View>
