@@ -37,6 +37,12 @@ class CategoryRepository:
         row = await conn.fetchrow("SELECT * FROM categories WHERE id = $1", category_id)
         return dict(row) if row else None
 
+    async def list_all(self, conn: Connection) -> list[dict]:
+        """Sem paginação — tabela de referência pequena (10 linhas na Fase 1). Uso
+        interno (prompt da IA de categorização, validação de slug), não é endpoint."""
+        rows = await conn.fetch("SELECT * FROM categories ORDER BY position")
+        return [dict(row) for row in rows]
+
     async def get_by_slug(self, conn: Connection, slug: str) -> dict | None:
         row = await conn.fetchrow("SELECT * FROM categories WHERE slug = $1", slug)
         return dict(row) if row else None

@@ -1,0 +1,40 @@
+{
+  "hortifruti": [
+    "banana", "maca", "laranja", "mamao", "melancia", "abacaxi", "uva", "limao",
+    "tomate", "alface", "cebola", "batata", "cenoura", "couve", "pepino", "chuchu",
+    "batata doce", "abobrinha", "repolho", "beterraba"
+  ],
+  "laticinios": [
+    "leite", "iogurte", "queijo", "manteiga", "margarina", "requeijao", "nata",
+    "creme de leite", "leite condensado", "queijo minas", "queijo mussarela", "coalhada"
+  ],
+  "mercearia": [
+    "arroz", "feijao", "acucar", "sal", "oleo", "azeite", "farinha de trigo",
+    "farinha de mandioca", "macarrao", "cafe", "molho de tomate", "extrato de tomate",
+    "vinagre", "biscoito", "bolacha", "achocolatado", "gelatina", "fermento"
+  ],
+  "bebidas": [
+    "refrigerante", "suco", "cerveja", "agua mineral", "energetico", "cha",
+    "vinho", "agua de coco", "isotonico"
+  ],
+  "carnes": [
+    "alcatra", "frango", "picanha", "linguica", "bisteca", "costela", "file de frango",
+    "carne moida", "peito de frango", "coxa de frango", "carne de porco", "peixe",
+    "salsicha", "bacon", "mortadela", "presunto"
+  ],
+  "padaria": [
+    "pao", "pao de forma", "pao frances", "bisnaguinha", "torrada", "bolo", "rosca"
+  ],
+  "congelados": [
+    "sorvete", "lasanha congelada", "nuggets", "hamburguer congelado", "polpa de fruta congelada",
+    "pizza congelada", "batata frita congelada"
+  ],
+  "limpeza": [
+    "detergente", "sabao em po", "sabao", "desinfetante", "amaciante", "alvejante",
+    "agua sanitaria", "esponja de aco", "limpador", "multiuso", "sabao liquido"
+  ],
+  "higiene": [
+    "shampoo", "condicionador", "sabonete", "creme dental", "escova de dente",
+    "papel higienico", "absorvente", "desodorante", "fralda", "aparelho de barbear"
+  ]
+}
