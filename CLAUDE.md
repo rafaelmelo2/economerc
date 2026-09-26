@@ -47,7 +47,31 @@ Este arquivo cobre estrutura, operação e as regras de trabalho.
 
 ## Comandos
 
-Ainda não há código. O alvo (padrão nexarena) está em `.claude/rules/project.md > Setup local`.
+```bash
+# Backend + workers (Postgres 5442, Valkey 6389, NATS 4232, API 8010). O .env escolhe o ambiente.
+docker compose up -d --build --wait
+docker compose run --rm migrate up            # migrations dbmate
+cd backend && uv run pytest && uv run ruff check .
+docker compose run --rm supercatalao-collector # coletor (profile cron)
+
+# Web (resumo) — http://localhost:5180
+cd apps/web && bun run dev        # build: bun run build · testes: bun run test
+
+# App (Expo). `bunx` quebra o Metro neste ambiente: use o Node direto.
+cd apps/mobile
+PATH=$HOME/.nvm/versions/node/v24.14.1/bin:$PATH node node_modules/.bin/expo start --port 8091
+node node_modules/.bin/tsc --noEmit   # tipos de rota vêm de .expo/types (gerados pelo expo start/export)
+node node_modules/.bin/vitest run
+```
+
+| URL | O quê |
+|---|---|
+| http://localhost:8010/api/docs | Swagger da API |
+| `POST /api/auth/dev-login` | Login de desenvolvimento (só `ENVIRONMENT=local`) |
+| http://localhost:5180 | Web |
+
+Testes de backend usam o banco `economerc_test` no Postgres do compose (fixture `bearer` cria
+usuário real). Em worktree paralela, exporte `TEST_DATABASE_URL` com um banco próprio.
 
 ## Regras de trabalho (customizáveis)
 
