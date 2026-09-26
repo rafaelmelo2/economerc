@@ -38,7 +38,7 @@ from api.repositories.receipts.receipt_repository import receipt_repository
 from api.repositories.users.user_preferences_repository import user_preferences_repository
 from api.services.catalog.gtin import InvalidGtinError, normalize_gtin
 from api.services.nfce.adapters.base import MarketDraft, ReceiptItemDraft
-from api.services.nfce.adapters.go import NfceFetchError, NfceRateLimitedError
+from api.services.nfce.adapters.go import NfceFetchError, NfceNotFoundError, NfceRateLimitedError
 from api.services.nfce.raw_storage import compress_raw_html
 from api.services.nfce.registry import get_adapter
 from api.services.nfce.streams import (
@@ -199,6 +199,20 @@ async def _persist_item(
         )
 
 
+async def _handle_permanent_failure(
+    conn: Connection, receipt_id: UUID, from_status: str, reason: str
+) -> ReceiptProcessingOutcome:
+    """Falha que nenhuma tentativa nova resolve (UF sem adaptador, ou o portal dizendo que a
+    chave não existe/é inválida — `NfceNotFoundError`, GO_NOTES.md > item 6): `failed` de
+    imediato, sem consumir o orçamento de `MAX_ATTEMPTS` que é só para falha transitória."""
+    await receipt_repository.mark_failed(conn, receipt_id, reason)
+    await receipt_event_repository.append(
+        conn, receipt_id, from_status=from_status, to_status="failed", detail=reason
+    )
+    log.warning("receipt_processing_failed_permanently", receipt_id=str(receipt_id), reason=reason)
+    return ReceiptProcessingOutcome.FAILED
+
+
 async def _handle_retryable_failure(
     conn: Connection, receipt_id: UUID, attempts: int, reason: str
 ) -> ReceiptProcessingOutcome:
@@ -247,15 +261,9 @@ async def process_receipt(conn: Connection, receipt_id: UUID) -> ReceiptProcessi
 
     adapter = get_adapter(receipt["state_code"])
     if adapter is None:
-        await receipt_repository.mark_failed(conn, receipt_id, "UF ainda não suportada")
-        await receipt_event_repository.append(
-            conn,
-            receipt_id,
-            from_status=receipt["status"],
-            to_status="failed",
-            detail="UF ainda não suportada",
+        return await _handle_permanent_failure(
+            conn, receipt_id, receipt["status"], "UF ainda não suportada"
         )
-        return ReceiptProcessingOutcome.FAILED
 
     processing = await receipt_repository.mark_processing(conn, receipt_id)
     await receipt_event_repository.append(
@@ -284,6 +292,8 @@ async def process_receipt(conn: Connection, receipt_id: UUID) -> ReceiptProcessi
                 conn, receipt_id, from_status="processing", to_status="done"
             )
         return ReceiptProcessingOutcome.DONE
+    except NfceNotFoundError as exc:
+        return await _handle_permanent_failure(conn, receipt_id, "processing", str(exc))
     except (NfceRateLimitedError, NfceFetchError) as exc:
         return await _handle_retryable_failure(conn, receipt_id, processing["attempts"], str(exc))
     except Exception as exc:  # parse malformado, mercado sem cidade, etc — retryable até o limite

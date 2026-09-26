@@ -51,7 +51,14 @@ async def test_list_admin_prices_returns_latest_observation_per_market(
 ):
     city_id, product, market = await _seed_product_and_market(db_conn, "1")
     now = dt.datetime.now(dt.UTC)
-    await _price(db_conn, city_id, product, market, amount=Decimal("9.00"), observed_at=now - dt.timedelta(days=5))
+    await _price(
+        db_conn,
+        city_id,
+        product,
+        market,
+        amount=Decimal("9.00"),
+        observed_at=now - dt.timedelta(days=5),
+    )
     await _price(db_conn, city_id, product, market, amount=Decimal("10.00"), observed_at=now)
 
     res = await client.get(
@@ -84,10 +91,14 @@ async def test_list_admin_prices_flags_stale_after_15_days(
     assert body["items"][0]["is_stale"] is True
 
 
-async def test_list_admin_prices_filters_by_source(client: AsyncClient, db_conn: Connection, bearer):
+async def test_list_admin_prices_filters_by_source(
+    client: AsyncClient, db_conn: Connection, bearer
+):
     city_id, product, market = await _seed_product_and_market(db_conn, "3")
     now = dt.datetime.now(dt.UTC)
-    await _price(db_conn, city_id, product, market, amount=Decimal("3.00"), observed_at=now, source="nfce")
+    await _price(
+        db_conn, city_id, product, market, amount=Decimal("3.00"), observed_at=now, source="nfce"
+    )
 
     res = await client.get(
         "/api/admin/prices",

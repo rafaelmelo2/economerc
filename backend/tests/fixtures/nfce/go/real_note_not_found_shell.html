@@ -1,0 +1,125 @@
+<!--
+Fixture REAL — resposta de `nfeweb.sefaz.go.gov.br/nfeweb/sites/nfce/danfeNFCe?p=...` para uma
+chave de acesso com formato válido (44 dígitos, modelo 65, DV módulo 11 correto) mas inexistente
+na base da SEFAZ (26/09/2026, GO_NOTES.md > item 1). `jsessionid` foi redigido; o resto é a
+resposta completa e sem alterações — sem CPF nem outro dado sensível (é uma "casca" de erro).
+Confirma: 200 OK síncrono, sem captcha, `_message.ERROR` com "Não foi possível encontrar o XML
+da nota" (HTML-entity-encoded) — é essa a sinalização que `NfceNotFoundError` detecta.
+-->
+<!DOCTYPE html>
+
+
+<html class="no-js no-ie" dir="ltr" lang="pt-BR">
+<!--<![endif]-->
+
+<head>
+    <title>Nota Fiscal do Consumidor(NFC-e)</title>
+
+	<meta charset="UTF-8" />
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+    <meta content="index, follow" name="robots" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+
+    <meta content="IE=11" http-equiv="X-UA-Compatible" />
+
+	<!--[if lt IE 9]>
+	  <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+	  <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+	<![endif]-->
+
+    <script type="text/javascript" src="/nfeweb/ruxitagentjs_ICA7NVfqrux_10345260810170330.js" data-dtconfig="app=9aa055a00fe76ebc|owasp=1|featureHash=ICA7NVfqrux|srsr=5000|rdnt=1|uxrgce=1|cuc=xzlug4op|mel=100000|expw=1|dpvc=1|lastModification=1790099525549|postfix=xzlug4op|tp=500,50,0|srbbv=2|agentUri=/nfeweb/ruxitagentjs_ICA7NVfqrux_10345260810170330.js|reportUrl=/nfeweb/rb_bf96467wer|rid=RID_1641203463|rpid=-1638577168|domain=sefaz.go.gov.br"></script><link rel="stylesheet" href="/nfeweb/static/css/plugins/bootstrap/bootstrap.min.css;jsessionid=REDACTED" />
+    <link rel="stylesheet" href="/nfeweb/static/css/plugins/reset.css;jsessionid=REDACTED" />
+    <link rel="stylesheet" href="/nfeweb/static/css/plugins/boilerplate/main.css;jsessionid=REDACTED" />
+
+    <link rel="stylesheet" href="/nfeweb/static/css/specific/partials.css;jsessionid=REDACTED" />
+    <link rel="stylesheet" href="/nfeweb/static/css/specific/loading.css;jsessionid=REDACTED" />
+
+    <link rel="stylesheet" href="/nfeweb/static/css/override/default-normalize.css;jsessionid=REDACTED" />
+    <link rel="stylesheet" href="/nfeweb/static/css/override/mobile-width-fix.css;jsessionid=REDACTED" />
+
+	<div>
+    <div>
+   <link rel="stylesheet" href="/nfeweb/static/css/app/nfce/showDanfeNFCe.css;jsessionid=REDACTED" />
+</div>
+</div>
+
+	<script src="/nfeweb/static/js/plugins/jquery-1.11.3.min.js;jsessionid=REDACTED"></script>
+	<script src="/nfeweb/static/js/plugins/bootstrap.min.js;jsessionid=REDACTED"></script>
+  	<script src="/nfeweb/static/js/specific/loading.js;jsessionid=REDACTED"></script>
+  	<script src="/nfeweb/static/js/specific/message.js;jsessionid=REDACTED"></script>
+
+	<script charset="utf-8" type="text/javascript">
+		new WindowModalLoading('Aguarde...');	
+	</script>
+
+</head>
+
+<body>
+	<div id="loading" style="display: none"></div>
+	<div id="message-containter" style="display: none"></div>
+
+	<div class="container" id="content">
+
+	<div id="panel">
+
+		<div class="panel-body col-lg-12">
+
+			<div class="col-lg-12 container-title-label-left">
+				<label>Consulta da NFC-e</label>
+			</div>
+
+			
+
+			
+
+		</div>
+
+	</div>
+
+</div>
+
+	<footer>
+		<script src="/nfeweb/static/js/plugins/handlebars-v3.0.3.js;jsessionid=REDACTED"></script>
+    	<script src="/nfeweb/static/js/plugins/maskedinput.min.js;jsessionid=REDACTED"></script>
+	    <script src="/nfeweb/static/js/plugins/boilerplate/modernizr-2.6.2.min.js;jsessionid=REDACTED"></script>
+    	<script src="/nfeweb/static/js/plugins/boilerplate/main.js;jsessionid=REDACTED"></script>
+    	<script src="/nfeweb/static/js/plugins/boilerplate/plugins.js;jsessionid=REDACTED"></script>
+
+    	<script src="/nfeweb/static/js/specific/response.js;jsessionid=REDACTED"></script>
+    	<script src="/nfeweb/static/js/specific/normalize.js;jsessionid=REDACTED"></script>
+    	<script src="/nfeweb/static/js/specific/masks.js;jsessionid=REDACTED"></script>
+    	<script src="/nfeweb/static/js/specific/bug-fix.js;jsessionid=REDACTED"></script>
+
+    	<div>
+	<div>
+	<script charset="utf-8" src="/nfeweb/static/js/app/nfce/danfeNFCe.js;jsessionid=REDACTED"></script>
+	<script charset="utf-8" src="/nfeweb/static/js/app/nfce/printDanfeNFCe.js;jsessionid=REDACTED"></script>
+	<script charset="utf-8" src="/nfeweb/static/js/app/nfce/showDanfeNFCe.js;jsessionid=REDACTED"></script>
+
+	<script charset="utf-8" type="text/javascript">
+        new ShowDanfeNFCe(
+       		'#danfe-nfce-container',
+       		'/nfeweb/imagens/',
+			null,
+			null,
+			null
+		);
+	</script>
+</div>
+
+	<script charset="utf-8" type="text/javascript">
+        new LoadingBar('Aguarde...');
+	</script>
+</div>
+
+		<script charset="utf-8" type="text/javascript">
+			var _message = {'SUCCESS':[],'ERROR':['N&atilde;o foi poss&iacute;vel encontrar o XML da nota'],'INFO':[],'WARN':[]};
+			createGlobalMessagesFromResponse(_message);
+		</script>
+
+	</footer>
+
+
+
+
+</body></html>

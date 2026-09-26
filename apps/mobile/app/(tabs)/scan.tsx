@@ -11,13 +11,15 @@ import { ManualEntrySheet } from "@/components/scan/manual-entry-sheet";
 import { ScanConfirmSheet, type ScanConfirmTarget } from "@/components/scan/scan-confirm-sheet";
 import { ScanFrame } from "@/components/scan/scan-frame";
 import { ScanToast } from "@/components/scan/toast";
+import { MarketPickerSheet } from "@/components/cart/market-picker-sheet";
 import { Text } from "@/components/ui/text";
-import type { CartItemRecord } from "@/lib/cart/contract";
+import { setCartMarket, useActiveCart, type CartItemRecord } from "@/lib/cart/contract";
 import { enqueueReceiptFromQr } from "@/lib/receipts/queue";
 import { buildDemoLookupResult, demoEanAt } from "@/lib/scan/demo-fixtures";
 import { validateGtin } from "@/lib/scan/gtin";
 import { validateNfceQr } from "@/lib/scan/nfce-qr";
 import { lookupProductByEan } from "@/lib/scan/product-lookup";
+import { useSessionStore } from "@/lib/store/session-store";
 import { scheduleSyncSoon } from "@/lib/sync/engine";
 
 /** Mesmo código lido duas vezes em menos disso é ruído da câmera, não uma nova leitura. */
@@ -42,10 +44,17 @@ export default function ScanScreen() {
   const [confirmTarget, setConfirmTarget] = useState<ScanConfirmTarget | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [addedItem, setAddedItem] = useState<CartItemRecord | null>(null);
+  const [marketPickerVisible, setMarketPickerVisible] = useState(false);
+
+  const cart = useActiveCart();
+  const cityId = useSessionStore((state) => state.onboarding.cityId);
 
   const lastScanRef = useRef<{ code: string; at: number } | null>(null);
   const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const demoIndexRef = useRef(0);
+  // EAN pendente de lookup enquanto o seletor "Em qual mercado você está?" está aberto (primeiro
+  // scan de um carrinho sem mercado, docs/produto.md > bloco 6) — retomado ao fechar o seletor.
+  const pendingLookupEanRef = useRef<string | null>(null);
 
   const showBanner = useCallback((text: string) => {
     setBanner(text);
@@ -58,6 +67,39 @@ export default function ScanScreen() {
     const result = await lookupProductByEan(ean);
     setConfirmTarget({ kind: "scan", ean, lookup: result });
   }, []);
+
+  /** Primeiro scan de um carrinho ainda sem mercado (`cart.marketId === null`) pergunta "Em qual
+   * mercado você está?" antes do lookup — depois disso o preço sugerido já pode preferir o
+   * mercado certo (`lib/scan/product-lookup.ts`). Só pergunta uma vez: assim que o carrinho
+   * ganha um mercado, essa checagem nunca mais dispara pra ele. */
+  const runLookupWithMarketGate = useCallback(
+    (ean: string) => {
+      if (cart.marketId === null) {
+        pendingLookupEanRef.current = ean;
+        setMarketPickerVisible(true);
+        return;
+      }
+      void runLookup(ean);
+    },
+    [cart.marketId, runLookup],
+  );
+
+  function handleMarketPickerClosed() {
+    setMarketPickerVisible(false);
+    const pendingEan = pendingLookupEanRef.current;
+    pendingLookupEanRef.current = null;
+    if (pendingEan) void runLookup(pendingEan);
+  }
+
+  function handleSelectMarket(market: { id: string; tradeName: string }) {
+    void setCartMarket(market.id, market.tradeName);
+    handleMarketPickerClosed();
+  }
+
+  function handleSelectOtherMarket(freeTextName: string) {
+    void setCartMarket(null, freeTextName);
+    handleMarketPickerClosed();
+  }
 
   /** Modo demo nunca bate na rede — a câmera (e o backend autenticado) não existem em screenshot. */
   const runDemoLookup = useCallback(() => {
@@ -108,12 +150,12 @@ export default function ScanScreen() {
     }
 
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    void runLookup(validation.code);
+    runLookupWithMarketGate(validation.code);
   }
 
   function handleManualSubmit(ean: string) {
     setManualEntryVisible(false);
-    void runLookup(ean);
+    runLookupWithMarketGate(ean);
   }
 
   function handleAdded(item: CartItemRecord) {
@@ -183,6 +225,15 @@ export default function ScanScreen() {
       />
 
       <ScanConfirmSheet target={confirmTarget} onClose={() => setConfirmTarget(null)} onAdded={handleAdded} />
+
+      <MarketPickerSheet
+        visible={marketPickerVisible}
+        cityId={cityId}
+        currentMarketId={cart.marketId}
+        onClose={handleMarketPickerClosed}
+        onSelectMarket={handleSelectMarket}
+        onSelectOther={handleSelectOtherMarket}
+      />
 
       {addedItem ? (
         <ScanToast

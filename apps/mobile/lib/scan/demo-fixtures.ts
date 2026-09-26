@@ -113,6 +113,7 @@ export function buildDemoLookupResult(index: number): ProductLookupResult {
       source: fixture.source,
       isStale: fixture.isStale,
       observedAt,
+      isCurrentMarket: true, // demo mode não passa pelo seletor de mercado — mantém o texto pré-onda-6
     },
   };
 }

@@ -67,6 +67,32 @@ confirmar sem uma chave verdadeira, e o que continua **[validar com nota real]**
 - Se o `tpAmb` de homologação (`nfewebhomolog.sefaz.go.gov.br`) tem o mesmo comportamento.
 - Se há algum rate limit/bloqueio explícito por volume (não testado — só uma requisição feita).
 
+## 6. Reconfirmação com chave de DV válido (26/09/2026, bloco 6)
+
+A chave fictícia usada na investigação original (item 1) não tinha o dígito verificador (módulo
+11) calculado — o teste deste bloco gerou uma chave com DV correto (`cUF=52`, modelo 65,
+`52250912345678000199650010000000011123456780`) e repetiu a requisição real a
+`GET /nfeweb/sites/nfce/danfeNFCe?p=<chave>|3|1`:
+
+- **200 OK**, mesma "casca" (`ShowDanfeNFCe('#danfe-nfce-container', '/nfeweb/imagens/', null,
+  null, null)`), sem captcha — confirma o item 1.
+- A mensagem de erro **exata** (JS, HTML-entity-encoded):
+  `var _message = {'SUCCESS':[],'ERROR':['N&atilde;o foi poss&iacute;vel encontrar o XML da
+  nota'],'INFO':[],'WARN':[]};` → decodificado: **"Não foi possível encontrar o XML da nota"**.
+  Bate exatamente com o que o item 1 já tinha registrado.
+- Resposta completa salva como fixture real (`tests/fixtures/nfce/go/real_note_not_found_shell.html`,
+  `jsessionid` redigido — sem CPF/dado sensível).
+- **Implementação**: `go.py` agora expõe `NfceNotFoundError` — `fetch()` inspeciona o HTML por
+  esse `_message.ERROR` (JS var da própria casca, sempre presente mesmo com lista vazia) e, se
+  houver qualquer entrada, levanta `NfceNotFoundError` com a mensagem do portal (decodificada de
+  HTML entities). O worker (`workers/receipts_worker.py`) trata isso como falha **permanente**:
+  marca `failed` na hora, sem consumir tentativa de retry — só `NfceFetchError`/
+  `NfceRateLimitedError` (rede, timeout, 5xx, rate limit) continuam retryable até `MAX_ATTEMPTS`.
+- Ainda não testado com nota real que EXISTE — se o layout de sucesso também popular o array
+  `ERROR` com avisos não-fatais (ex.: nota fora do prazo de consulta mas ainda exibível), o
+  parser vai precisar de uma lista de marcadores mais específica em vez de "qualquer ERROR não
+  vazio". **[validar com nota real]**.
+
 **Enquanto isso, o parser (`go.py > parse_danfe_html`) implementa o layout padrão descrito em
 `docs/nfce-sefaz-go.md`** (tabela `table.itens` com colunas Código/Descrição/Qtde/UN/Vl. Unit/
 Vl. Total, bloco `.cnpj`/`.nome`/`.endereco` do emitente, `.valor-total`/`.valor-desconto`,

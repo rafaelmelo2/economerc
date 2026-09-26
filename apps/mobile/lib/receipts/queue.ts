@@ -62,6 +62,7 @@ export function enqueueReceiptFromQr(input: {
     cart_client_id: input.cartClientId,
     status: "queued",
     failure_reason: null,
+    failure_message: null,
     market_id: null,
     market_name: null,
     issued_at: null,
@@ -117,6 +118,7 @@ async function applyServerResponse(
     server_id: body.id,
     status: body.status as ReceiptQueueStatus,
     failure_reason: body.failureReason,
+    failure_message: body.failureMessage,
     market_id: body.marketId,
     market_name: marketName,
     issued_at: body.issuedAt,
@@ -143,9 +145,12 @@ async function drainReceiptQueue(): Promise<void> {
     } catch (error) {
       if (error instanceof ApiRequestError && error.status >= 400 && error.status < 500) {
         // QR rejeitado pelo backend (400) — não é transitório, não adianta reenviar.
+        // `error.message` já é o `detail` pt-BR do backend (`ApiRequestError`) — serve como as
+        // duas coisas: motivo técnico e mensagem amigável (não tem um par distinto aqui).
         updateReceipt(db, row.client_id, {
           status: "failed",
           failure_reason: error.message,
+          failure_message: error.message,
           updated_at: nowIso(),
         });
         continue;

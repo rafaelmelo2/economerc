@@ -1,9 +1,11 @@
 import datetime as dt
 from decimal import Decimal
-from typing import Literal
+from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+from api.services.nfce.failure_messages import resolve_failure_message
 
 ReceiptStatus = Literal["pending", "processing", "done", "failed", "duplicate"]
 
@@ -25,6 +27,7 @@ class ReceiptResponse(BaseModel):
     state_code: str
     status: ReceiptStatus
     failure_reason: str | None
+    failure_message: str | None = None
     attempts: int
     market_id: UUID | None
     issued_at: dt.datetime | None
@@ -32,6 +35,14 @@ class ReceiptResponse(BaseModel):
     discount_amount: Decimal | None
     created_at: dt.datetime
     updated_at: dt.datetime
+
+    @model_validator(mode="after")
+    def _fill_failure_message(self) -> Self:
+        """Deriva de `status`/`failure_reason` quando não veio pronto — permite `ReceiptResponse(
+        **row)` direto no repositório (nenhuma coluna nova, `docs/brand/voz.md` no texto)."""
+        if self.failure_message is None:
+            self.failure_message = resolve_failure_message(self.status, self.failure_reason)
+        return self
 
 
 class ReceiptItemResponse(BaseModel):

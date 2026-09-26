@@ -15,6 +15,7 @@ quando as notas reais chegarem, já que o bruto fica salvo no banco.
 """
 
 import datetime as dt
+import html
 import re
 from decimal import Decimal, InvalidOperation
 from typing import Final
@@ -47,6 +48,15 @@ _MONEY_PATTERN: Final = re.compile(r"-?\d{1,3}(?:\.\d{3})*(?:,\d{1,4})?|-?\d+(?:
 _CNPJ_PATTERN: Final = re.compile(r"\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}")
 _EMISSAO_PATTERN: Final = re.compile(r"(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2}:\d{2})")
 
+# A "casca" que `ShowDanfeNFCe` injeta sempre traz esse array JS, mesmo vazio (GO_NOTES.md >
+# item 1 e 6, requisição real feita com chave fictícia de DV válido). Qualquer entrada em
+# `ERROR` é o portal respondendo com sucesso (200, sem captcha) que NÃO resolveu a chave —
+# nota inexistente/chave inválida, não falha de rede: tratamos como permanente, não retryable.
+_PORTAL_MESSAGE_PATTERN: Final = re.compile(
+    r"_message\s*=\s*\{.*?'ERROR'\s*:\s*\[(?P<errors>.*?)\]", re.DOTALL
+)
+_PORTAL_ERROR_ITEM_PATTERN: Final = re.compile(r"'((?:[^'\\]|\\.)*)'")
+
 # Cabeçalhos esperados na tabela de itens do DANFE NFC-e resumido — a ordem varia
 # por layout, então mapeamos por texto do `<th>` em vez de por posição fixa.
 _HEADER_ALIASES: Final[dict[str, str]] = {
@@ -74,6 +84,12 @@ class NfceFetchError(Exception):
     """Falha ao consultar o portal da SEFAZ (rede, timeout, HTTP 4xx/5xx) — retryable."""
 
 
+class NfceNotFoundError(Exception):
+    """O portal respondeu (200, sem captcha) que a chave não existe/é inválida — falha
+    PERMANENTE (GO_NOTES.md > item 6): não é rede fora do ar, é a SEFAZ dizendo "essa nota não
+    está aqui". O worker marca `failed` na hora, sem gastar tentativa de retry."""
+
+
 class NfceParseError(ValueError):
     """HTML da SEFAZ não bateu com o layout esperado do DANFE NFC-e."""
 
@@ -99,6 +115,20 @@ def _normalize_cnpj(text: str) -> str:
 
 def _header_key(th_text: str) -> str | None:
     return _HEADER_ALIASES.get(th_text.strip().lower())
+
+
+def extract_portal_error(raw_html: str) -> str | None:
+    """Lê o array `_message.ERROR` da casca `ShowDanfeNFCe` (GO_NOTES.md > item 1 e 6).
+
+    Devolve a primeira mensagem (HTML entities decodificadas), ou `None` se a lista vier vazia
+    (caso normal — nota resolvida, sem erro do portal)."""
+    match = _PORTAL_MESSAGE_PATTERN.search(raw_html)
+    if match is None:
+        return None
+    items = _PORTAL_ERROR_ITEM_PATTERN.findall(match.group("errors"))
+    if not items:
+        return None
+    return html.unescape(items[0])
 
 
 def _parse_market(soup: BeautifulSoup) -> MarketDraft:
@@ -212,7 +242,11 @@ class GoNfceAdapter:
             )
 
     async def fetch(self, qr_url: str) -> str:
-        """Busca o DANFE NFC-e resumido. CPF do consumidor é removido antes de retornar."""
+        """Busca o DANFE NFC-e resumido. CPF do consumidor é removido antes de retornar.
+
+        A resolução da chave é síncrona nesta mesma requisição (GO_NOTES.md > item 1): se o
+        portal respondeu com sucesso (200) mas sinalizou que não achou a nota, isso é permanente
+        (`NfceNotFoundError`), não uma falha de rede — o worker não deve gastar retry nisso."""
         await self._check_rate_limit()
         url = rewrite_old_go_host(qr_url)
         try:
@@ -223,6 +257,10 @@ class GoNfceAdapter:
                 response.raise_for_status()
         except RequestException as exc:
             raise NfceFetchError(f"falha ao consultar o portal da SEFAZ-GO: {exc}") from exc
+
+        portal_error = extract_portal_error(response.text)
+        if portal_error is not None:
+            raise NfceNotFoundError(f"SEFAZ-GO: {portal_error}")
         return redact_consumer_cpf(response.text)
 
     def parse(self, raw_html: str) -> ReceiptDraft:

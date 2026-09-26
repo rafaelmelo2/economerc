@@ -11,7 +11,7 @@ from asyncpg import Connection
 
 from api.repositories.geo.city_repository import city_repository
 from api.repositories.receipts.receipt_repository import NewReceipt, receipt_repository
-from api.services.nfce.adapters.go import NfceFetchError, parse_danfe_html
+from api.services.nfce.adapters.go import NfceFetchError, NfceNotFoundError, parse_danfe_html
 from api.workers import receipts_worker
 from api.workers.receipts_worker import MAX_ATTEMPTS, ReceiptProcessingOutcome, process_receipt
 from tests.sync_helpers import create_test_user
@@ -207,6 +207,33 @@ async def test_process_receipt_retries_then_dead_letters_after_max_attempts(
     assert receipt["status"] == "failed"
     assert receipt["attempts"] == MAX_ATTEMPTS
     assert "timeout simulado" in receipt["failure_reason"]
+
+
+async def test_process_receipt_marks_failed_immediately_when_note_not_found_in_sefaz(
+    db_conn: Connection, monkeypatch
+):
+    """`NfceNotFoundError` (portal respondeu, sem captcha, dizendo que não achou a nota —
+    GO_NOTES.md > item 6) é falha PERMANENTE: `failed` na primeira tentativa, sem consumir o
+    orçamento de `MAX_ATTEMPTS` que existe só para falha transitória (rede/timeout/5xx)."""
+    user_id = await _create_user_with_city(db_conn)
+    receipt_id = await _create_pending_receipt(db_conn, user_id)
+    adapter = _FakeGoAdapter(
+        error=NfceNotFoundError("SEFAZ-GO: Não foi possível encontrar o XML da nota")
+    )
+    monkeypatch.setattr(receipts_worker, "get_adapter", lambda state_code: adapter)
+
+    outcome = await process_receipt(db_conn, receipt_id)
+
+    assert outcome == ReceiptProcessingOutcome.FAILED
+    receipt = await db_conn.fetchrow("SELECT * FROM receipts WHERE id = $1", receipt_id)
+    assert receipt["status"] == "failed"
+    assert receipt["attempts"] == 1  # nem chegou perto de MAX_ATTEMPTS
+    assert "Não foi possível encontrar o XML da nota" in receipt["failure_reason"]
+
+    events = await db_conn.fetch(
+        "SELECT to_status FROM receipt_events WHERE receipt_id = $1 ORDER BY created_at", receipt_id
+    )
+    assert [e["to_status"] for e in events] == ["processing", "failed"]
 
 
 async def test_process_receipt_fails_when_user_has_no_city_for_a_brand_new_market(

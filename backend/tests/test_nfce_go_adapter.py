@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from api.services.nfce.adapters.base import redact_consumer_cpf
-from api.services.nfce.adapters.go import NfceParseError, parse_danfe_html
+from api.services.nfce.adapters.go import NfceParseError, extract_portal_error, parse_danfe_html
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "nfce" / "go"
 
@@ -57,6 +57,21 @@ def test_parse_danfe_html_never_leaks_cpf_into_the_draft():
 def test_parse_danfe_html_raises_with_clear_reason_when_items_table_is_missing():
     with pytest.raises(NfceParseError, match="tabela de itens"):
         parse_danfe_html(_read_fixture("synthetic_missing_items_table.html"))
+
+
+def test_extract_portal_error_reads_note_not_found_from_real_fixture():
+    """Fixture REAL (GO_NOTES.md > item 6) — chave com DV válido mas inexistente na SEFAZ."""
+    error = extract_portal_error(_read_fixture("real_note_not_found_shell.html"))
+    assert error == "Não foi possível encontrar o XML da nota"
+
+
+def test_extract_portal_error_returns_none_when_error_list_is_empty():
+    html = "<script>var _message = {'SUCCESS':[],'ERROR':[],'INFO':[],'WARN':[]};</script>"
+    assert extract_portal_error(html) is None
+
+
+def test_extract_portal_error_returns_none_without_message_var():
+    assert extract_portal_error("<html><body>sem _message aqui</body></html>") is None
 
 
 def test_redact_consumer_cpf_removes_punctuated_cpf():

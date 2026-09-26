@@ -158,6 +158,12 @@ export function useActiveCart(): ActiveCart {
   return useCartStore((state) => state.cart);
 }
 
+/** Leitura fora de componente (não é hook) — usada pelo lookup de preço do scan
+ * (`lib/scan/product-lookup.ts`) pra saber qual mercado preferir sem se inscrever no store. */
+export function getActiveCartMarketId(): string | null {
+  return useCartStore.getState().cart.marketId;
+}
+
 export async function addCartItem(input: NewCartItemInput): Promise<CartItemRecord> {
   const db = getDb();
   const cartRow = ensureOpenCartRow();

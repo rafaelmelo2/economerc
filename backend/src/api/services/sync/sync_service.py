@@ -19,8 +19,11 @@ from asyncpg import Connection
 
 from api.repositories.carts.cart_item_repository import cart_item_repository
 from api.repositories.carts.cart_repository import cart_repository
+from api.repositories.markets.market_repository import market_repository
+from api.repositories.prices.price_repository import NewPriceObservation, price_repository
 from api.repositories.sync.sync_change_repository import sync_change_repository
 from api.schemas.sync.push import CartItemMutation, CartMutation, SyncMutation, SyncPushItemResult
+from api.services.prices.price_service import resolve_confidence
 from api.services.sync.field_versions import latest_version, merge_field_versions
 
 CART_ITEM_REQUIRED_ON_CREATE: tuple[str, ...] = ("cart_client_id", "product_name", "unit_price")
@@ -53,6 +56,60 @@ def _json_safe(value: Any) -> Any:
 
 def _snapshot(row: dict, keys: tuple[str, ...]) -> dict[str, Any]:
     return {key: _json_safe(row.get(key)) for key in keys}
+
+
+async def _generate_community_price_for_item(
+    conn: Connection, cart: dict, item: dict, user_id: UUID
+) -> None:
+    """Item de carrinho FECHADO vira preço da comunidade — "o preço de cada mercado disponível
+    pra todas as pessoas" (docs/produto.md). O item cujo preço o usuário editou na hora (a
+    etiqueta mandou) é justamente o dado mais valioso, e ele chega aqui como qualquer outro.
+
+    Idempotente: `client_id` do preço é o MESMO `client_id` do item — `prices` é único por
+    `(reported_by, client_id)` (skill `database`), então reprocessar/reenviar o mesmo item
+    (retry de rede, reenvio do mesmo lote) nunca duplica.
+
+    Não gera preço quando falta o essencial: carrinho sem mercado (não sabemos ONDE), item sem
+    `product_id` (não sabemos O QUÊ) ou preço zerado (`prices.amount` tem `CHECK (amount > 0)` —
+    inserir violaria a constraint e derrubaria a transação do lote inteiro).
+    """
+    if cart["market_id"] is None or item["product_id"] is None:
+        return
+    if item["unit_price"] is None or item["unit_price"] <= 0:
+        return
+
+    market = await market_repository.get_by_id(conn, cart["market_id"])
+    if market is None:  # defensivo — FK garante isso, mas nunca gera preço órfão
+        return
+
+    await price_repository.create(
+        conn,
+        NewPriceObservation(
+            product_id=item["product_id"],
+            market_id=cart["market_id"],
+            city_id=market["city_id"],
+            amount=item["unit_price"],
+            source="community",
+            confidence=resolve_confidence("community"),
+            observed_at=cart["closed_at"] or item["updated_at"],
+            reported_by=user_id,
+            client_id=item["client_id"],
+        ),
+    )
+
+
+async def _generate_community_prices_for_closed_cart(
+    conn: Connection, cart: dict, user_id: UUID
+) -> None:
+    """Carrinho que este upsert acabou de fechar (ou reenvio de um já fechado) — 1 preço por
+    item ativo (sem tombstone) com produto casado. O upsert de um item isolado que chega DEPOIS
+    de o carrinho já estar fechado (ex.: usuário edita o preço offline antes de sincronizar) tem
+    seu próprio gancho em `_apply_cart_item_upsert` — este cobre o fechamento em si."""
+    if cart["status"] != "closed" or cart["market_id"] is None:
+        return
+    items = await cart_item_repository.list_active_by_cart(conn, cart["id"])
+    for item in items:
+        await _generate_community_price_for_item(conn, cart, item, user_id)
 
 
 async def apply_push_batch(
@@ -105,6 +162,7 @@ async def _apply_cart_upsert(
             _snapshot(row, CART_SNAPSHOT_KEYS),
             row["updated_at"],
         )
+        await _generate_community_prices_for_closed_cart(conn, row, user_id)
         return _applied(mutation.client_id, row["updated_at"])
 
     winning_fields, winning_versions = merge_field_versions(
@@ -129,6 +187,7 @@ async def _apply_cart_upsert(
         _snapshot(row, CART_SNAPSHOT_KEYS),
         row["updated_at"],
     )
+    await _generate_community_prices_for_closed_cart(conn, row, user_id)
     return _applied(mutation.client_id, row["updated_at"])
 
 
@@ -202,6 +261,8 @@ async def _apply_cart_item_upsert(
             _snapshot(row, CART_ITEM_SNAPSHOT_KEYS),
             row["updated_at"],
         )
+        if cart["status"] == "closed":  # item novo chegando num carrinho já fechado
+            await _generate_community_price_for_item(conn, cart, row, user_id)
         return _applied(mutation.client_id, row["updated_at"])
 
     incoming.pop("cart_client_id", None)  # imutável após a criação — reenvio é ignorado
@@ -227,6 +288,9 @@ async def _apply_cart_item_upsert(
         _snapshot(row, CART_ITEM_SNAPSHOT_KEYS),
         row["updated_at"],
     )
+    cart = await cart_repository.get_by_id(conn, existing["cart_id"])
+    if cart is not None and cart["status"] == "closed":  # edição chegando após o fechamento
+        await _generate_community_price_for_item(conn, cart, row, user_id)
     return _applied(mutation.client_id, row["updated_at"])
 
 
