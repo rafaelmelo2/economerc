@@ -54,3 +54,6 @@ backend/data/
 
 # Tokens gerados ficam versionados: a vitrine e os apps leem direto
 !packages/design-tokens/dist/
+
+# Worktrees dos subagentes
+.claude/worktrees/

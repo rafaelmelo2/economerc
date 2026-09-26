@@ -16,7 +16,7 @@ paralelo em `docs/brand/` e entra a partir da etapa 4.
 - [ ] Scaffold FastAPI (skills `python-config-bootstrap`, `logging-setup`), `config/app/{local,staging,prod}.yaml`.
 - [ ] dbmate + primeiras migrations: `states`, `cities` (seed GO + Catalão), `categories` (seed com NCM).
 - [ ] `/api/health`, `CustomORJSONResponse`, `PagedResponse`, erros padrão.
-- [ ] Bloco `ai.tasks` na config + cliente único (Gemini/OpenRouter) com log de custo.
+- [ ] Bloco `ai.tasks` na config + cliente único (OpenRouter) com log de custo.
 - **Verificação:** `uv run pytest` verde; `curl /api/health` 200; chamada de teste a cada provider de IA.
 
 ## Etapa 2 — Auth Google + Apple

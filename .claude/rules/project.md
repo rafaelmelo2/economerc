@@ -34,8 +34,8 @@ Visão completa: `docs/produto.md`. Arquitetura: `docs/arquitetura.md`.
 - **NFC-e por UF**: `services/nfce/adapters/<uf>.py` com interface única (`parse(qr_url) →
   ReceiptDraft`). Começa por **GO** (`docs/nfce-sefaz-go.md`). Ingestão assíncrona via NATS
   JetStream (subject `receipts.ingest`), nunca no request do app.
-- **IA configurável por tarefa**: `config/app/{env}.yaml > ai.tasks.<tarefa> = {provider, model,
-  timeout, max_tokens}`. Providers: `gemini` (padrão) e `openrouter` (API OpenAI-compatível).
+- **IA configurável por tarefa**: `config/app/{env}.yaml > ai.tasks.<tarefa> = {model,
+  timeout, max_tokens}`. Provider único: **OpenRouter** (`OPENROUTER_API_KEY`); Gemini entra pelo slug (`google/gemini-…`). Nunca chamar a API do Google direto.
   Tarefas iniciais: `price_tag_ocr` (visão), `categorize_product` (texto). Trocar modelo = só config.
 - **Categorização**: regra primeiro (NCM da NFC-e → categoria, dicionário de termos), LLM só
   como fallback, resultado cacheado por EAN. Nunca chamar LLM duas vezes pro mesmo EAN.

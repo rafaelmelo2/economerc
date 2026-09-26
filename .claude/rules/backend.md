@@ -23,7 +23,7 @@
 | Fuzzy         | **RapidFuzz**                                 | —                                                                                                                                                     |
 | Logging       | **structlog + stdlib + orjson**               | Ver `logs.md`. Setup: skill `logging-setup`.                                                                                                          |
 | Cache + Msg   | **Valkey 8 (UDS) + NATS**                     | Gate `infra` (cache, messaging, decisão de arquitetura). Boundary: cache→Valkey, messaging→NATS.                                                      |
-| LLM / Visão   | **Gemini + OpenRouter** (via `langchain-openai`, API OpenAI-compatível) | Modelo configurável **por tarefa** em `config/app/{env}.yaml > ai.tasks` (ex.: `price_tag_ocr`, `categorize_product`). Nunca hardcode de modelo no código. Ver `project.md`. |
+| LLM / Visão   | **OpenRouter** (único provider; Gemini e outros pelo slug do modelo) | Modelo configurável **por tarefa** em `config/app/{env}.yaml > ai.tasks` (ex.: `price_tag_ocr`, `categorize_product`). Nunca hardcode de modelo no código. Ver `project.md`. |
 | Config        | **YAML + Pydantic**                           | Skill `python-config-bootstrap`. `config/app/{env}.yaml` + `.env`.                                                                                    |
 | Concurrency   | **anyio**                                     | Skill `anyio-concurrency`. NUNCA `asyncio.gather/create_task/wait_for/Lock/Queue` direto.                                                             |
 

@@ -42,7 +42,7 @@ Como o [roadmap da Fase 1](roadmap-fase1.md) vira código. As etapas do roadmap 
 |---|---|---|
 | **4A NFC-e** | `backend/…/nfce`, `receipts` | 7: QR v2/v3, adaptador GO, worker NATS, bruto privado, descarte de CPF |
 | **4B IA: OCR e categorização** | `backend/…/ocr`, `categorization` | 6 + 8: OCR de etiqueta, NCM → categoria, fallback de IA |
-| **4C Coletores** | `backend/…/collectors` | [fontes-de-dados](fontes-de-dados.md): crawler Supermercado Catalão, webhook WhatsApp (Evolution) → Gemini, modo coletor |
+| **4C Coletores** | `backend/…/collectors` | [fontes-de-dados](fontes-de-dados.md): crawler Supermercado Catalão, webhook WhatsApp (Evolution) → IA de visão (OpenRouter), modo coletor |
 
 ## Onda 5: histórico, web e fechamento (paralelo)
 
@@ -54,7 +54,7 @@ Como o [roadmap da Fase 1](roadmap-fase1.md) vira código. As etapas do roadmap 
 ## Depende de você (não dá pra agente fazer)
 
 - Credenciais Google Cloud (client IDs iOS/Android/Web) e Apple Developer (Service ID, chave `.p8`), antes do login real (onda 3).
-- Chaves Gemini/OpenRouter no `.env`.
+- Chave do OpenRouter no `.env` (`OPENROUTER_API_KEY`).
 - 10 a 20 NFC-e reais de Catalão (onda 4).
 - Build EAS e teste em aparelho físico.
 - Chip dedicado e sessão da Evolution API para o coletor de WhatsApp.

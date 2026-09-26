@@ -27,7 +27,7 @@ flowchart LR
   end
 
   WR -->|HTTP| SEFAZ[Portal NFC-e<br/>SEFAZ-GO / outras UFs]
-  WC -->|HTTP| AI[Gemini / OpenRouter]
+  WC -->|HTTP| AI[OpenRouter]
   API -->|JWKS| OAuth[Google / Apple]
   WC -->|HTTP| OFF[Open Food Facts]
 ```
@@ -79,16 +79,16 @@ flowchart LR
 ```yaml
 # config/app/{env}.yaml
 ai:
-  providers:
-    gemini:     { base_url: ..., api_key_env: GEMINI_API_KEY }
-    openrouter: { base_url: https://openrouter.ai/api/v1, api_key_env: OPENROUTER_API_KEY }
+  # Provider único: OpenRouter (OPENROUTER_API_KEY). Gemini, Claude etc. entram pelo slug do modelo.
+  base_url: https://openrouter.ai/api/v1
   tasks:
-    price_tag_ocr:      { provider: gemini, model: <modelo-visão>, timeout_s: 8 }
-    categorize_product: { provider: openrouter, model: <modelo-barato>, timeout_s: 5 }
+    price_tag_ocr:      { model: google/gemini-2.5-flash, timeout_s: 8 }
+    categorize_product: { model: google/gemini-2.5-flash-lite, timeout_s: 5 }
+    flyer_extract:      { model: google/gemini-2.5-flash, timeout_s: 20 }
 ```
 
-- Cliente único OpenAI-compatível (`langchain-openai`/SDK), escolhido por tarefa. Trocar de modelo
-  = mudar YAML. Toda chamada loga provider, modelo, latência, tokens e custo estimado.
+- Cliente único para o OpenRouter (API OpenAI-compatível), modelo escolhido por tarefa. Trocar de modelo
+  = mudar o slug no YAML. Toda chamada loga modelo, latência, tokens e custo estimado.
 - Saída sempre estruturada (JSON schema / Pydantic) e validada; falha → fallback de regra ou manual.
 - Cache por entrada (EAN, hash da imagem) — nunca pagar duas vezes pela mesma resposta.
 

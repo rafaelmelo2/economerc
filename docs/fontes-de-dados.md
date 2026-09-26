@@ -42,7 +42,7 @@ Chip dedicado "EconoMerc Ofertas"  →  entra nos grupos/listas dos mercados
         ▼  webhook: messages.upsert
 backend  POST /webhooks/whatsapp  →  NATS  offers.ingest
         ▼
-worker:  texto → regex de preço + LLM   |   imagem de encarte → Gemini visão (JSON: produto, preço, unidade, validade)
+worker:  texto → regex de preço + LLM   |   imagem de encarte → Gemini visão via OpenRouter (JSON: produto, preço, unidade, validade)
         ▼
 prices (source = 'flyer', confidence 0,8)  +  promotions (validade)  →  revisão no painel admin antes de publicar (no começo)
 ```

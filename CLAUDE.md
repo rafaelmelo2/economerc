@@ -17,7 +17,7 @@ Este arquivo cobre estrutura, operação e as regras de trabalho.
 | App | Expo SDK 57 · Expo Router · NativeWind · react-native-reusables · TanStack Query/Form · Zod · expo-sqlite (offline-first) · expo-camera · EAS |
 | Web | React 19 · Vite · TanStack Router/Query/Form · shadcn · Tailwind 4 (padrão nexarena) |
 | Backend | Python 3.13 · FastAPI · asyncpg + SQL puro · dbmate · Postgres · Valkey · NATS · Granian · uv |
-| IA | Gemini + OpenRouter, modelo configurável por tarefa |
+| IA | OpenRouter (único provider; Gemini e outros pelo slug), modelo configurável por tarefa |
 | Auth | Google + Apple (OAuth-only) |
 | Infra | VPS + Docker Compose + Nginx (padrão nexarena) |
 
