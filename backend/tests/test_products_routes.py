@@ -1,10 +1,7 @@
-import uuid
-
 import pytest
 from asyncpg import Connection
 from httpx import AsyncClient
 
-from api.core.security import issue_access_token
 from api.core.valkey_client import get_valkey
 from api.main import app
 from api.repositories.catalog.product_repository import NewProduct, product_repository
@@ -35,23 +32,18 @@ def _fake_valkey():
     app.dependency_overrides.pop(get_valkey, None)
 
 
-def _bearer(role: str = "user") -> dict[str, str]:
-    token = issue_access_token(uuid.uuid4(), role)
-    return {"Authorization": f"Bearer {token}"}
-
-
 async def test_get_product_by_ean_requires_auth(client: AsyncClient):
     res = await client.get(f"/api/products/by-ean/{VALID_EAN13}")
     assert res.status_code == 401
 
 
-async def test_get_product_by_ean_invalid_gtin_returns_400(client: AsyncClient):
-    res = await client.get("/api/products/by-ean/12345", headers=_bearer())
+async def test_get_product_by_ean_invalid_gtin_returns_400(client: AsyncClient, bearer):
+    res = await client.get("/api/products/by-ean/12345", headers=await bearer())
     assert res.status_code == 400
 
 
 async def test_get_product_by_ean_known_locally_skips_off(
-    client: AsyncClient, db_conn: Connection, monkeypatch
+    client: AsyncClient, db_conn: Connection, monkeypatch, bearer
 ):
     await product_repository.create(
         db_conn, NewProduct(ean=VALID_EAN13, name="Café Local", unit="g", net_quantity=500)
@@ -63,14 +55,14 @@ async def test_get_product_by_ean_known_locally_skips_off(
     monkeypatch.setattr(
         "api.services.catalog.product_lookup_service.fetch_off_raw_product", _fail_if_called
     )
-    res = await client.get(f"/api/products/by-ean/{VALID_EAN13}", headers=_bearer())
+    res = await client.get(f"/api/products/by-ean/{VALID_EAN13}", headers=await bearer())
 
     assert res.status_code == 200
     assert res.json()["name"] == "Café Local"
 
 
 async def test_get_product_by_ean_found_only_in_off_creates_local_product(
-    client: AsyncClient, monkeypatch
+    client: AsyncClient, monkeypatch, bearer
 ):
     calls: list[str] = []
 
@@ -82,21 +74,23 @@ async def test_get_product_by_ean_found_only_in_off_creates_local_product(
         "api.services.catalog.product_lookup_service.fetch_off_raw_product", fake_fetch
     )
 
-    first = await client.get(f"/api/products/by-ean/{VALID_EAN13}", headers=_bearer())
+    first = await client.get(f"/api/products/by-ean/{VALID_EAN13}", headers=await bearer())
     assert first.status_code == 200
     body = first.json()
     assert body["name"] == "Arroz Off 1kg"
     assert body["source"] == "off"
     assert body["unit"] == "kg"
 
-    second = await client.get(f"/api/products/by-ean/{VALID_EAN13}", headers=_bearer())
+    second = await client.get(f"/api/products/by-ean/{VALID_EAN13}", headers=await bearer())
     assert second.status_code == 200
     assert second.json()["id"] == body["id"]
 
     assert calls == [VALID_EAN13]  # produto já existe local na 2ª chamada — OFF não repete
 
 
-async def test_get_product_by_ean_not_found_anywhere_caches_miss(client: AsyncClient, monkeypatch):
+async def test_get_product_by_ean_not_found_anywhere_caches_miss(
+    client: AsyncClient, monkeypatch, bearer
+):
     calls: list[str] = []
 
     async def fake_fetch(ean: str) -> dict | None:
@@ -107,29 +101,29 @@ async def test_get_product_by_ean_not_found_anywhere_caches_miss(client: AsyncCl
         "api.services.catalog.product_lookup_service.fetch_off_raw_product", fake_fetch
     )
 
-    first = await client.get(f"/api/products/by-ean/{VALID_EAN13}", headers=_bearer())
-    second = await client.get(f"/api/products/by-ean/{VALID_EAN13}", headers=_bearer())
+    first = await client.get(f"/api/products/by-ean/{VALID_EAN13}", headers=await bearer())
+    second = await client.get(f"/api/products/by-ean/{VALID_EAN13}", headers=await bearer())
 
     assert first.status_code == 404
     assert second.status_code == 404
     assert calls == [VALID_EAN13]  # segunda chamada usou o cache de "não encontrado"
 
 
-async def test_list_products_requires_admin(client: AsyncClient):
-    res = await client.get("/api/products", headers=_bearer("user"))
+async def test_list_products_requires_admin(client: AsyncClient, bearer):
+    res = await client.get("/api/products", headers=await bearer("user"))
     assert res.status_code == 403
 
 
-async def test_list_products_empty_for_admin(client: AsyncClient):
-    res = await client.get("/api/products", headers=_bearer("admin"))
+async def test_list_products_empty_for_admin(client: AsyncClient, bearer):
+    res = await client.get("/api/products", headers=await bearer("admin"))
     assert res.status_code == 200
     body = res.json()
     assert body["items"] == []
     assert body["total"] == 0
 
 
-async def test_admin_product_crud_lifecycle(client: AsyncClient):
-    admin_headers = _bearer("admin")
+async def test_admin_product_crud_lifecycle(client: AsyncClient, bearer):
+    admin_headers = await bearer("admin")
 
     created = await client.post(
         "/api/products",

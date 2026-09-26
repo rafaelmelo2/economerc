@@ -6,7 +6,7 @@ CREATE TABLE carts (
     id             UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id        UUID          NOT NULL REFERENCES users(id),
     client_id      UUID          NOT NULL,
-    market_id      UUID,                             -- FK adicionada no merge da onda 2
+    market_id      UUID,                             -- FK em 20260926060001_link_carts_to_catalog.sql
     status         VARCHAR(10)   NOT NULL DEFAULT 'open',
     budget         NUMERIC(12,2),
     started_at     TIMESTAMPTZ   NOT NULL DEFAULT now(),

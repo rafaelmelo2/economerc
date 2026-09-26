@@ -14,11 +14,6 @@ CATALAO_IBGE_CODE = 5205109
 STALE_AFTER_DAYS = 15
 
 
-def _bearer(role: str = "user") -> dict[str, str]:
-    token = issue_access_token(uuid.uuid4(), role)
-    return {"Authorization": f"Bearer {token}"}
-
-
 async def _authenticated_headers(conn: Connection, role: str = "user") -> dict[str, str]:
     """`prices.reported_by` tem FK pra `users` — POST /prices precisa de um usuário real."""
     user_id = uuid.uuid4()
@@ -48,26 +43,30 @@ async def test_get_prices_requires_auth(client: AsyncClient):
     assert res.status_code == 401
 
 
-async def test_get_prices_invalid_ean_returns_400(client: AsyncClient):
+async def test_get_prices_invalid_ean_returns_400(client: AsyncClient, bearer):
     res = await client.get(
-        "/api/prices", params={"ean": "12345", "city_id": str(uuid.uuid4())}, headers=_bearer()
+        "/api/prices", params={"ean": "12345", "city_id": str(uuid.uuid4())}, headers=await bearer()
     )
     assert res.status_code == 400
 
 
-async def test_get_prices_unknown_product_returns_404(client: AsyncClient):
+async def test_get_prices_unknown_product_returns_404(client: AsyncClient, bearer):
     res = await client.get(
         "/api/prices",
         params={"ean": "4006381333931", "city_id": str(uuid.uuid4())},
-        headers=_bearer(),
+        headers=await bearer(),
     )
     assert res.status_code == 404
 
 
-async def test_get_prices_empty_when_no_observations(client: AsyncClient, db_conn: Connection):
+async def test_get_prices_empty_when_no_observations(
+    client: AsyncClient, db_conn: Connection, bearer
+):
     city_id, product, _ = await _seed_product_and_market(db_conn)
     res = await client.get(
-        "/api/prices", params={"ean": product["ean"], "city_id": str(city_id)}, headers=_bearer()
+        "/api/prices",
+        params={"ean": product["ean"], "city_id": str(city_id)},
+        headers=await bearer(),
     )
     assert res.status_code == 200
     assert res.json() == []

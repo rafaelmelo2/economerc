@@ -12,7 +12,7 @@ CREATE TABLE cart_items (
     cart_client_id  UUID          NOT NULL,
     user_id         UUID          NOT NULL REFERENCES users(id),  -- escopo do upsert idempotente
     client_id       UUID          NOT NULL,
-    product_id      UUID,                              -- FK adicionada no merge da onda 2
+    product_id      UUID,                              -- FK em 20260926060001_link_carts_to_catalog.sql
     ean             VARCHAR(14),
     product_name    VARCHAR(200)  NOT NULL,
     unit_price      NUMERIC(12,2) NOT NULL,

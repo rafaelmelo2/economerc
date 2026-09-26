@@ -57,6 +57,7 @@ import asyncpg
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from api.core.security import issue_access_token
 from api.main import app
 from config.database import get_conn, init_connection
 
@@ -117,3 +118,18 @@ async def client(db_conn):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def bearer(db_conn):
+    """Headers de auth para um usuário REAL no banco.
+
+    `require_current_user` confere no banco que o usuário existe e não foi
+    excluído (onda 2A) — token de UUID inventado dá 401.
+    """
+
+    async def make_headers(role: str = "user") -> dict[str, str]:
+        user_id = await db_conn.fetchval("INSERT INTO users (role) VALUES ($1) RETURNING id", role)
+        return {"Authorization": f"Bearer {issue_access_token(user_id, role)}"}
+
+    return make_headers

@@ -3,15 +3,9 @@ import uuid
 from asyncpg import Connection
 from httpx import AsyncClient
 
-from api.core.security import issue_access_token
 from api.repositories.geo.city_repository import city_repository
 
 CATALAO_IBGE_CODE = 5205109
-
-
-def _bearer(role: str = "user") -> dict[str, str]:
-    token = issue_access_token(uuid.uuid4(), role)
-    return {"Authorization": f"Bearer {token}"}
 
 
 async def test_list_markets_requires_auth(client: AsyncClient):
@@ -19,9 +13,13 @@ async def test_list_markets_requires_auth(client: AsyncClient):
     assert res.status_code == 401
 
 
-async def test_list_markets_by_city_returns_seeded_three(client: AsyncClient, db_conn: Connection):
+async def test_list_markets_by_city_returns_seeded_three(
+    client: AsyncClient, db_conn: Connection, bearer
+):
     city = await city_repository.get_by_ibge_code(db_conn, CATALAO_IBGE_CODE)
-    res = await client.get("/api/markets", params={"city_id": str(city["id"])}, headers=_bearer())
+    res = await client.get(
+        "/api/markets", params={"city_id": str(city["id"])}, headers=await bearer()
+    )
     assert res.status_code == 200
     body = res.json()
     assert body["total"] == 3
@@ -29,27 +27,29 @@ async def test_list_markets_by_city_returns_seeded_three(client: AsyncClient, db
     assert names == {"Supermercado Catalão", "Pontal Atacado e Varejo", "Rio Vermelho Atacadista"}
 
 
-async def test_list_markets_empty_for_unknown_city(client: AsyncClient):
-    res = await client.get("/api/markets", params={"city_id": str(uuid.uuid4())}, headers=_bearer())
+async def test_list_markets_empty_for_unknown_city(client: AsyncClient, bearer):
+    res = await client.get(
+        "/api/markets", params={"city_id": str(uuid.uuid4())}, headers=await bearer()
+    )
     assert res.status_code == 200
     body = res.json()
     assert body["items"] == []
     assert body["total"] == 0
 
 
-async def test_create_market_requires_admin(client: AsyncClient, db_conn: Connection):
+async def test_create_market_requires_admin(client: AsyncClient, db_conn: Connection, bearer):
     city = await city_repository.get_by_ibge_code(db_conn, CATALAO_IBGE_CODE)
     res = await client.post(
         "/api/markets",
         json={"city_id": str(city["id"]), "trade_name": "Mercado Não Autorizado"},
-        headers=_bearer("user"),
+        headers=await bearer("user"),
     )
     assert res.status_code == 403
 
 
-async def test_admin_market_crud_lifecycle(client: AsyncClient, db_conn: Connection):
+async def test_admin_market_crud_lifecycle(client: AsyncClient, db_conn: Connection, bearer):
     city = await city_repository.get_by_ibge_code(db_conn, CATALAO_IBGE_CODE)
-    admin_headers = _bearer("admin")
+    admin_headers = await bearer("admin")
 
     created = await client.post(
         "/api/markets",
